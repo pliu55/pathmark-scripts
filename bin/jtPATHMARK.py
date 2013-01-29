@@ -369,7 +369,8 @@ def main():
         else:
             logger.info("Run complete!")
             system("rm -rf .lastjobTree")
-            system("mv .jobTree .lastjobTree")
+            if os.path.exists(".lastjobTree"):
+                system("mv .jobTree .lastjobTree")
 
 if __name__ == "__main__":
     from jtPATHMARK import *
