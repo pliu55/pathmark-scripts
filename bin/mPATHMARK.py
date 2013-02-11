@@ -254,6 +254,7 @@ def mean_std(inList, sample = True):
     return(mean, std)
 
 def median(inList):
+    inList.sort()
     i = len(inList)
     if not i%2:
         return (inList[(i/2)-1]+inList[i/2])/2.0
@@ -263,17 +264,16 @@ def median_mad(inList):
     """Calculates median and mad"""
     
     cList = floatList(inList)
-    cList.sort()
     if len(cList) == 0:
-        median = "NA"
-        mad = "NA"
+        medianVal = "NA"
+        madVal = "NA"
     else:
-        median = median(cList)
+        medianVal = median(cList)
         adList = []
         for i in cList:
-            adList.append(abs(i-median))
-        mad = median(adList)
-    return(median, mad)
+            adList.append(abs(i-medianVal))
+        madVal = median(adList)
+    return(medianVal, madVal)
     
 def r2Col(inf, appendData = {}, delim = "\t", null = "NA", header = False):
     """read 2 column data"""
