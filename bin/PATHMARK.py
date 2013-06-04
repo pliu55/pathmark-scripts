@@ -22,7 +22,7 @@ from mPATHMARK import *
 from copy import deepcopy
 
 verbose = True
-outputCleaned = False
+outputCleaned = True
 
 logFile = None
 
