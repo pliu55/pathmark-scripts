@@ -83,7 +83,7 @@ def PATHMARK(files, globalPathway, features = None, statLine = None,
         pStats = []
         if statLine is None:
             for i in range(len(sData.keys())):
-                pStats.append(mean_std(sData[i][feature].values()))
+                pStats.append(median_mad(sData[i][feature].values()))
         else:
             for i in re.split(",",statLine):
                 (v1, v2) = re.split(";",i)

@@ -69,14 +69,14 @@ def main(args):
             verbose = False
     
     ## Check structure
-    assert os.path.exists("LABEL.NA")
-    assert os.path.exists("TYPE.NA")
-    assert os.path.exists("%s_SCORE.NA" % (feature))
+    assert os.path.exists("%s/LABEL.NA" % (feature))
+    assert os.path.exists("%s/TYPE.NA" % (feature))
+    assert os.path.exists("%s/SCORE.NA" % (feature))
     assert os.path.exists("%s" % (feature))
     
-    naFiles = ["LABEL.NA", "TYPE.NA", "%s_SCORE.NA" % (feature)]
-    if os.path.exists("%s_BORDER.NA" % (feature)):
-        naFiles.append("%s_BORDER.NA" % (feature))
+    naFiles = ["%s/LABEL.NA" % (feature), "%s/TYPE.NA" % (feature), "%s/SCORE.NA" % (feature)]
+    if os.path.exists("%s/BORDER.NA" % (feature)):
+        naFiles.append("%s/BORDER.NA" % (feature))
     
     ## Identify nets with feature
     sifFiles = list()
