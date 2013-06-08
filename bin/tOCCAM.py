@@ -8,12 +8,10 @@ Options:
   -q            run quietly
 """
 ## Written By: Sam Ng
-## Last Updated: ##/##/####
 import getopt, math, os, re, sys
-import mData
+from mPATHMARK import *
 
 verbose = True
-phenIndex = 0
 
 def usage(code = 0):
     print __doc__
@@ -33,26 +31,6 @@ def syscmd(cmd):
         print "Failed with exit status %i" % (exitstatus)
         sys.exit(10)
     log("... done\n")
-
-def mean_std(inList, sample = True):
-    """Calculates mean and std"""
-    cList = mData.floatList(inList)
-    if len(cList) == 0:
-        mean = "NA"
-        std = "NA"
-    else:
-        mean = sum(cList)/float(len(cList))
-        std = 0.0
-        for i in cList:
-            std += (i-mean)**2
-        if len(cList) > 1:
-            if sample:
-                std = math.sqrt(std/(len(cList)-1))
-            else:
-                std = math.sqrt(std/len(cList))
-        else:
-            std = 0.0
-    return(mean, std)
 
 def ttest(values0, values1, alpha = 0.05):
     (mean0, std0) = mean_std(values0)
@@ -85,31 +63,41 @@ def main(args):
             verbose = False
     
     ## execute
-    phenotypeName = re.split("/", phenotypeFile)[-1].rstrip(".tab")
-    dataName = re.split("/", dataFile)[-1].rstrip(".tab")
+    phenotypeName = re.split("/", phenotypeFile)[-1]
+    dataName = re.split("/", dataFile)[-1]
     outputDir = "OCCAM__%s__%s" % (phenotypeName, dataName)
     syscmd("mkdir %s" % (outputDir))
-    (phenData, phenColumns, phenRows) = mData.rCRSData(phenotypeFile, retFeatures = True)
-    (matData, matColumns, matRows) = mData.rCRSData(dataFile, retFeatures = True)
+    (phenData, phenFeatures, phenSamples) = rCRSData(phenotypeFile, retFeatures = True)
     
-    ## samples
-    posSamples = []
-    negSamples = []
-    for sample in phenRows:
-        if sample not in matColumns:
+    ## compute stats
+    o = open("%s/results.tab" % (outputDir), "w")
+    o.write("id\t%s\n" % ("\t".join(phenFeatures)))
+    f = open(dataFile, "r")
+    dataSamples = f.readline().rstrip().split("\t")[1:]
+    sampleIndex = {}
+    for i, sample in enumerate(dataSamples):
+        sampleIndex[sample] = i
+    for line in f:
+        if line.isspace():
             continue
-        if phenData[phenColumns[phenIndex]][sample] == "+":
-            posSamples.append(sample)
-        elif phenData[phenColumns[phenIndex]][sample] == "-":
-            negSamples.append(sample)
-    
-    ## output
-    f = open("%s/results.tab" % (outputDir), "w")
-    f.write("id\t%s\n" % (phenColumns[phenIndex]))
-    for row in matRows:
-        val = ttest([matData[i][row] for i in negSamples], [matData[i][row] for i in posSamples])
-        f.write("%s\t%s\n" % (row, val))
+        dataValues = line.rstrip().split("\t")
+        dataFeature = dataValues.pop(0)
+        o.write("%s" % (dataFeature))
+        for phenotype in phenFeatures:
+            posSamples = []
+            negSamples = []
+            for sample in phenSamples:
+                if sample not in dataSamples:
+                    continue
+                if phenData[phenotype][sample] == 1:
+                    posSamples.append(sample)
+                elif phenData[phenotype][sample] == 0:
+                    negSamples.append(sample)
+            val = ttest([float(dataValues[sampleIndex[i]]) for i in negSamples], [float(dataValues[sampleIndex[i]]) for i in posSamples])
+            o.write("\t%s" % (val))
+        o.write("\n")
     f.close()
+    o.close()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
