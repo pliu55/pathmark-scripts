@@ -13,6 +13,7 @@ Options:
   -l  str                     log file
   -n                          output node attributes for cytoscape
   -t                          output paradigm net
+  -h                          use good hub inclusion filter
   -q                          run quietly
 """
 ## Written By: Sam Ng
@@ -49,9 +50,10 @@ def syscmd(cmd):
         sys.exit(10)
     log(" ... done\n")
 
-def PATHMARK(files, globalPathway, features = None, statLine = None, 
-             filterBounds = [0,0], outDir = None, outputAttributes = False, 
-             outputPARADIGM = False, selectionRule = "OR", topDisconnected = 100):
+def PATHMARK(files, globalPathway, features = None, statLine = None,
+             filterBounds = [0,0], outDir = None, outputAttributes = False,
+             outputPARADIGM = False, selectionRule = "OR", topDisconnected = 100,
+             applyGoodHubFilter = False):
     filterString = "%s_%s" % (filterBounds[0], filterBounds[1])
     
     ## read global pathway
@@ -132,6 +134,14 @@ def PATHMARK(files, globalPathway, features = None, statLine = None,
                 pInteractions[sortedTop[i]] = {}
                 pInteractions[sortedTop[i]]["__DISCONNECTED__"] = "-disconnected-"
         
+        ## apply filters
+        if applyGoodHubFilter:
+            (pNodes, pInteractions) = filterGoodHub(pNodes, pInteractions, gNodes, gInteractions,
+                                                    sData[0][feature], pStats[0][0]+filterBounds[0]*pStats[0][1],
+                                                    childrenTypes = ["protein"],
+                                                    childrenThreshold = 3,
+                                                    includeThreshold = 0.5)
+        
         ## output networks
         if outDir == None:
             wrtDir = feature
@@ -154,7 +164,7 @@ def PATHMARK(files, globalPathway, features = None, statLine = None,
 if __name__ == "__main__":
     ## parse arguments
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "p:f:s:b:d:l:ntq")
+        opts, args = getopt.getopt(sys.argv[1:], "p:f:s:b:d:l:nthq")
     except getopt.GetoptError, err:
         print str(err)
         usage(2)
@@ -171,6 +181,7 @@ if __name__ == "__main__":
     outputAttributes = False
     outputPARADIGM = False
     selectionRule = "OR"
+    applyGoodHubFilter = False
     for o, a in opts:
         if o == "-p":
             globalPathway = a
@@ -194,6 +205,8 @@ if __name__ == "__main__":
             outputAttributes = True
         elif o == "-t":
             outputPARADIGM = True
+        elif o == "-h":
+            applyGoodHubFilter = True
         elif o == "-q":
             verbose = False
     if globalPathway is None:
@@ -205,4 +218,5 @@ if __name__ == "__main__":
     ## run
     PATHMARK(args, globalPathway, features = features, statLine = statLine, 
              filterBounds = filterBounds, outDir = outDir, outputAttributes = outputAttributes, 
-             outputPARADIGM = outputPARADIGM, selectionRule = selectionRule, topDisconnected = 100)
+             outputPARADIGM = outputPARADIGM, selectionRule = selectionRule, topDisconnected = 100,
+             applyGoodHubFilter = applyGoodHubFilter)

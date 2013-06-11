@@ -501,6 +501,74 @@ def cleanFilter(sNodes, sInteractions, gNodes, gInteractions):
             roInteractions = reverseInteractions(oInteractions)
     return(oNodes, oInteractions)
 
+def filterGoodHub(sNodes, sInteractions, gNodes, gInteractions, nodeScore, nodeThreshold,
+                  childrenTypes = ["protein"], childrenThreshold = 3,
+                  includeThreshold = 0.5):
+    ## initialize output variables
+    oNodes = deepcopy(sNodes)
+    oInteractions = deepcopy(sInteractions)
+    
+    ## build reverse
+    rgInteractions = reverseInteractions(gInteractions)
+    
+    ## identify all hubs
+    badHubs  = set()
+    goodHubs = set()
+    childrenMap = {}
+    for node in gNodes:
+        childrenMap[node] = set()
+        if node in gInteractions:
+            for child in gInteractions[node]:
+                if gNodes[child] in childrenTypes:
+                    childrenMap[node].update([child])
+        if node not in oNodes:
+            if len(childrenMap[node]) >= childrenThreshold:
+                badHubs.update([node])
+    
+    ## iteratively add good hubs
+    hubScore = {}
+    currentCount = 1
+    currentNodes = []
+    while (currentCount > 0):
+        currentCount = 0
+        currentNodes = []
+        currentHubs = deepcopy(badHubs)
+        ## identify hubs to add
+        for hub in currentHubs:
+            goodChildren = set()
+            for child in childrenMap[hub]:
+                if child in nodeScore:
+                    if nodeScore[child] >= nodeThreshold:
+                        goodChildren.update([child])
+                if child in goodHubs:
+                    goodChildren.update([child])
+            if float(len(goodChildren))/float(len(childrenMap[hub])) >= includeThreshold:
+                log("> %s\n" % (hub))
+                goodHubs.update([hub])
+                badHubs.remove(hub)
+                currentCount += 1
+                currentNodes.append(hub)
+                for child in childrenMap[hub]:
+                    if child not in oNodes:
+                        currentNodes.append(child)
+        ## connect new good hubs
+        while len(currentNodes) > 0:
+            node = currentNodes.pop(0)
+            oNodes[node] = gNodes[node]
+            if node in gInteractions:
+                for target in gInteractions[node]:
+                    if target in oNodes:
+                        if node not in oInteractions:
+                            oInteractions[node] = {}
+                        oInteractions[node][target] = gInteractions[node][target]
+            if node in rgInteractions:
+                for source in rgInteractions[node]:
+                    if source in oNodes:
+                        if source not in oInteractions:
+                            oInteractions[source] = {}
+                        oInteractions[source][node] = rgInteractions[node][source]
+    return(oNodes, oInteractions)
+
 def filterComplexesByGeneSupport(allNodes, forInteractions, revInteractions, typeMap, componentMap, threshold = 0.5):
     """remove complexes by percent support"""
     ## mark complexes in allNodes as unvisitedComplexes
