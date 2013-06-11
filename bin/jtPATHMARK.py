@@ -117,7 +117,7 @@ class jtCmd(Target):
         system(self.cmd)
 
 class prepareOCCAM(Target):
-    def __init__(self, paradigmPathway, scoreFile, phenotypeFile, subtractFile, dataFile, sampleList, filterParams, nNulls, outputZip, directory):
+    def __init__(self, paradigmPathway, scoreFile, phenotypeFile, subtractFile, dataFile, sampleList, filterParams, nNulls, outputZip, directory, pathmarkFlags = ""):
         Target.__init__(self, time=10000)
         self.paradigmPathway = paradigmPathway
         self.scoreFile = scoreFile
@@ -129,6 +129,7 @@ class prepareOCCAM(Target):
         self.nNulls = nNulls
         self.outputZip = outputZip
         self.directory = directory
+        self.pathmarkFlags = pathmarkFlags
     def run(self):
         os.chdir(self.directory)
         
@@ -137,10 +138,10 @@ class prepareOCCAM(Target):
             self.addChildTarget(jtData(self.dataFile, self.sampleList, self.directory))
             for null in range(1, self.nNulls + 1):
                 self.addChildTarget(jtNData(null, self.dataFile, self.sampleList, self.directory))
-        self.setFollowOnTarget(runOCCAM(self.paradigmPathway, self.scoreFile, self.phenotypeFile, self.subtractFile, self.dataFile, self.sampleList, self.filterParams, self.nNulls, self.outputZip, self.directory))
+        self.setFollowOnTarget(runOCCAM(self.paradigmPathway, self.scoreFile, self.phenotypeFile, self.subtractFile, self.dataFile, self.sampleList, self.filterParams, self.nNulls, self.outputZip, self.directory, self.pathmarkFlags))
         
 class runOCCAM(Target):
-    def __init__(self, paradigmPathway, scoreFile, phenotypeFile, subtractFile, dataFile, sampleList, filterParams, nNulls, outputZip, directory):
+    def __init__(self, paradigmPathway, scoreFile, phenotypeFile, subtractFile, dataFile, sampleList, filterParams, nNulls, outputZip, directory, pathmarkFlags = ""):
         Target.__init__(self, time=10000)
         self.paradigmPathway = paradigmPathway
         self.scoreFile = scoreFile
@@ -152,6 +153,7 @@ class runOCCAM(Target):
         self.nNulls = nNulls
         self.outputZip = outputZip
         self.directory = directory
+        self.pathmarkFlags = pathmarkFlags
     def run(self):
         os.chdir(self.directory)
         
@@ -170,10 +172,10 @@ class runOCCAM(Target):
             for null in range(1, self.nNulls + 1):
                 if not os.path.exists("OCCAM__%s__null_%s.tab" % (phenotypeName, null)):
                     self.addChildTarget(jtCmd("%s %s %s null_%s.tab" % (sys.executable, occamExec, self.phenotypeFile, null), self.directory))
-        self.setFollowOnTarget(branchPATHMARK(self.paradigmPathway, self.scoreFile, self.phenotypeFile, self.dataFile, self.sampleList, self.filterParams, self.nNulls, self.outputZip, self.directory))
+        self.setFollowOnTarget(branchPATHMARK(self.paradigmPathway, self.scoreFile, self.phenotypeFile, self.dataFile, self.sampleList, self.filterParams, self.nNulls, self.outputZip, self.directory, self.pathmarkFlags))
 
 class branchPATHMARK(Target):
-    def __init__(self, paradigmPathway, scoreFile, phenotypeFile, dataFile, sampleList, filterParams, nNulls, outputZip, directory):
+    def __init__(self, paradigmPathway, scoreFile, phenotypeFile, dataFile, sampleList, filterParams, nNulls, outputZip, directory, pathmarkFlags = ""):
         Target.__init__(self, time=10000)
         self.paradigmPathway = paradigmPathway
         self.scoreFile = scoreFile
@@ -184,6 +186,7 @@ class branchPATHMARK(Target):
         self.nNulls = nNulls
         self.outputZip = outputZip
         self.directory = directory
+        self.pathmarkFlags = pathmarkFlags
     def run(self):
         layoutDir = "%s/LAYOUT" % (self.directory)
         if not os.path.exists(layoutDir):
@@ -213,11 +216,11 @@ class branchPATHMARK(Target):
         ## iterate through occamPhenotypes
         occamPhenotypes = retColumns("real_results.all.tab")
         for occamPhenotype in occamPhenotypes:
-            self.addChildTarget(runPATHMARK(occamPhenotype, self.paradigmPathway, self.scoreFile, self.phenotypeFile, self.dataFile, self.sampleList, self.filterParams, self.nNulls, self.directory))
+            self.addChildTarget(runPATHMARK(occamPhenotype, self.paradigmPathway, self.scoreFile, self.phenotypeFile, self.dataFile, self.sampleList, self.filterParams, self.nNulls, self.directory, self.pathmarkFlags))
         self.setFollowOnTarget(cleanup(self.outputZip, self.directory))
 
 class runPATHMARK(Target):
-    def __init__(self, occamPhenotype, paradigmPathway, scoreFile, phenotypeFile, dataFile, sampleList, filterParams, nNulls, directory):
+    def __init__(self, occamPhenotype, paradigmPathway, scoreFile, phenotypeFile, dataFile, sampleList, filterParams, nNulls, directory, pathmarkFlags = ""):
         Target.__init__(self, time=10000)
         self.occamPhenotype = occamPhenotype
         self.paradigmPathway = paradigmPathway
@@ -228,6 +231,7 @@ class runPATHMARK(Target):
         self.filterParams = filterParams
         self.nNulls = nNulls
         self.directory = directory
+        self.pathmarkFlags = pathmarkFlags
     def run(self):
         layoutDir = "%s/LAYOUT" % (self.directory)
         os.chdir(layoutDir)
@@ -245,9 +249,9 @@ class runPATHMARK(Target):
                 wCRSData("null_results.%s.tab" % (self.occamPhenotype), nullScores)
         
         ## run pathmark
-        system("%s %s -l %s.params -b \"%s\" -f %s -n real_results.all.tab" % (sys.executable, pathmarkExec, self.occamPhenotype, self.filterParams, self.occamPhenotype))
+        system("%s %s -l %s.params -b \"%s\" %s -f %s -n real_results.all.tab" % (sys.executable, pathmarkExec, self.occamPhenotype, self.filterParams, self.pathmarkFlags, self.occamPhenotype))
         if self.nNulls > 0:
-            system("%s %s -b \"%s\" -s %s.params -d NULL_%s null_results.%s.tab" % (sys.executable, pathmarkExec, self.filterParams, self.occamPhenotype, self.occamPhenotype, self.occamPhenotype))
+            system("%s %s -b \"%s\" -s %s.params %s -d NULL_%s null_results.%s.tab" % (sys.executable, pathmarkExec, self.filterParams, self.occamPhenotype, self.pathmarkFlags, self.occamPhenotype, self.occamPhenotype))
             self.setFollowOnTarget(backgroundPATHMARK(self.occamPhenotype, self.nNulls, self.directory))
 
 class backgroundPATHMARK(Target):
@@ -291,6 +295,7 @@ def main():
     parser.add_option("-s", "--score", dest="scoreFile", default=None)
     parser.add_option("-f", "--filter", dest="filterParams", default="0.0;0.0")
     parser.add_option("-b", "--background", dest="nBackground", default="0")
+    parser.add_option("-u", "--hub", dest="hubFilter", action="store_true", default = False)
     options, args = parser.parse_args()
     print "Using Batch System '" + options.batchSystem + "'"
     
@@ -302,6 +307,9 @@ def main():
             sys.exit(0)
     
     ## parse arguments
+    pathmarkFlags = ""
+    if options.hubFilter:
+        pathmarkFlags = "-h"
     assert ((len(args) == 0) or (len(args) == 2) or (len(args) == 3))
     if len(args) == 0:
         pathwayZip = options.pathwayZip if options.pathwayZip is not None else basepathway
@@ -356,7 +364,7 @@ def main():
     logger.info("options: " + str(options))
     logger.info("starting make")
     writeScripts()
-    s = Stack(prepareOCCAM(paradigmPathway, scoreFile, phenotypeFile, None, dataFile, sampleList, filterParams, nNulls, outputZip, os.getcwd()))
+    s = Stack(prepareOCCAM(paradigmPathway, scoreFile, phenotypeFile, None, dataFile, sampleList, filterParams, nNulls, outputZip, os.getcwd(), pathmarkFlags = pathmarkFlags))
     if options.jobFile:
         s.addToJobFile(options.jobFile)
     else:
