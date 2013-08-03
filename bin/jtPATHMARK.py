@@ -276,7 +276,7 @@ class cleanup(Target):
     def run(self):
         os.chdir(self.directory)
         
-        system("rm -rf real* null* OCCAM__* background.R LAYOUT/*.params LAYOUT/real_results.* LAYOUT/null_results.* LAYOUT/*.tab LAYOUT/NULL_*")
+        system("rm -rf real* null* OCCAM__* background.R LAYOUT/*.params LAYOUT/NULL_*")
         if self.outputZip is not None:
             system("zip -r LAYOUT.zip LAYOUT")
             system("mv -f LAYOUT.zip %s" % (self.outputZip))
@@ -309,7 +309,7 @@ def main():
     ## parse arguments
     pathmarkFlags = ""
     if options.hubFilter:
-        pathmarkFlags = "-h"
+        pathmarkFlags = "-u"
     assert ((len(args) == 0) or (len(args) == 2) or (len(args) == 3))
     if len(args) == 0:
         pathwayZip = options.pathwayZip if options.pathwayZip is not None else basepathway

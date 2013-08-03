@@ -11,16 +11,20 @@ Options:
   -b  flt;flt                 filter lower and upper boundary parameters (default: 0;0)
   -d  str                     output to user-specified directory (default: feature/)
   -l  str                     log file
-  -n                          output node attributes for cytoscape
-  -t                          output paradigm net
-  -h                          use good hub inclusion filter
+  -u                          use good hub inclusion filter
   -q                          run quietly
 """
 ## Written By: Sam Ng
 ## Last Updated: 7/23/11
 import os, os.path, sys, getopt, re
-from mPATHMARK import *
+import networkx
+
+from xml.dom.minidom import Document
+from mPATHMARK import rCRSData
+from mPATHMARK import median_mad
+from mPATHMARK import mean_std
 from copy import deepcopy
+
 
 verbose = True
 outputCleaned = True
@@ -50,121 +54,378 @@ def syscmd(cmd):
         sys.exit(10)
     log(" ... done\n")
 
-def PATHMARK(files, globalPathway, features = None, statLine = None,
-             filterBounds = [0,0], outDir = None, outputAttributes = False,
-             outputPARADIGM = False, selectionRule = "OR", topDisconnected = 100,
-             applyGoodHubFilter = False):
+class FormatException(Exception):
+    pass
+
+def read_paradigm_graph(handle):
+    gr = networkx.MultiDiGraph()
+    for line in handle:
+        tmp = line.rstrip().split("\t")
+        if len(tmp) == 2:
+            if tmp[1] in gr.node:
+                continue              
+            gr.add_node( tmp[1], type=tmp[0] )
+        elif len(tmp) == 3:
+            if tmp[0] not in gr.node:
+                raise FormatException("Missing element declaration for : %s" % (tmp[0]))
+            if tmp[1] not in gr.node:
+                raise FormatException("Missing element declaration for : %s" % (tmp[1]))
+            gr.add_edge(tmp[0], tmp[1], interaction=tmp[2])
+        else:
+            raise FormatException("Bad line: %s" % (line))
+    return(gr)
+
+def reverseGraph(gr):
+    rgr = networkx.MultiDiGraph()
+    for node in gr.node:
+        rgr.add_node(node, type = gr.node[node]["type"])
+    for source in gr.edge:
+        for target in gr.edge[source]:
+            for edge in gr.edge[source][target]:
+                rgr.add_edge(target, source,
+                             interaction = gr.edge[source][target][edge]["interaction"])
+    return(rgr)
+
+def write_sif(gr, handle, edge_type_field='interaction'):
+    for (e1,e2,data) in gr.edges_iter(data=True):
+        interaction = data.get(edge_type_field, "pp")
+        handle.write("%s\t%s\t%s\n" % (e1, interaction, e2))
+
+def write_cytoscape_xgmml(gr, handle, scoreMap = {}):
+    doc = Document()
+    graph_node = doc.createElement('graph')
+    graph_node.setAttribute("xmlns", "http://www.cs.rpi.edu/XGMML")
+
+
+    graph_node.setAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/")
+    graph_node.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink" )
+    graph_node.setAttribute("xmlns:rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#" )
+    graph_node.setAttribute("xmlns:cy", "http://www.cytoscape.org" )
+    graph_node.setAttribute("directed", "1")
+    doc.appendChild(graph_node)
+
+    name_map = {}
+    for i, n in enumerate(gr.node):
+        name_map[n] = i
+        node = doc.createElement('node')
+        node.setAttribute('label', str(n))
+        node.setAttribute('id', str(i))
+
+        att_node = doc.createElement('att')
+        att_node.setAttribute('name', "TYPE")
+        att_node.setAttribute('value', str(gr.node[n]["type"]))
+        att_node.setAttribute('type', "string")
+        node.appendChild(att_node)
+        
+        att_node = doc.createElement('att')
+        att_node.setAttribute('name', "LABEL")
+        if gr.node[n]["type"] == "protein":
+            att_node.setAttribute('value', str(n))
+        else:
+            att_node.setAttribute('value', "")
+        att_node.setAttribute('type', "string")
+        node.appendChild(att_node)
+        
+        att_node = doc.createElement('att')
+        att_node.setAttribute('name', "SCORE")
+        if str(n) in scoreMap:
+            att_node.setAttribute('value', str(scoreMap[str(n)]))
+        else:
+            att_node.setAttribute('value', "NA")
+        att_node.setAttribute('type', "real")
+        node.appendChild(att_node)
+        graph_node.appendChild(node)
+
+    for source in gr.edge:
+        for target in gr.edge[source]:
+            for edge in gr.edge[source][target]:
+                edge_node = doc.createElement("edge")
+                edge_node.setAttribute("label", "%s - %s" % (source, target))
+                edge_node.setAttribute("source", str(name_map[source]))
+                edge_node.setAttribute("target", str(name_map[target]))
+                for key, value in gr.edge[source][target][edge].items():
+                    att_node = doc.createElement('att')
+                    att_node.setAttribute('name', key)
+                    att_node.setAttribute('value', str(value))
+                    if type(value) == float:
+                        att_node.setAttribute('type', "real")
+                    elif type(value) == int:
+                        att_node.setAttribute('type', "integer")
+                    else:
+                        att_node.setAttribute('type', "string")
+                    edge_node.appendChild(att_node)
+                graph_node.appendChild(edge_node)
+
+    doc.writexml(handle, addindent=" ", newl="\n")
+
+def selectLink(feature, source, target, unsignedData, filterStats, filterBounds,
+               selectionRule = "OR"):
+    linkScore = []
+    srcScore = []
+    trgScore = []
+    for i in range(len(unsignedData.keys())):
+        linkScore.append([unsignedData[i][feature][source],
+                          unsignedData[i][feature][target]])
+    for i in range(len(unsignedData.keys())):
+        if linkScore[i][0] > filterStats[i][0]+filterBounds[1]*filterStats[i][1]:
+            srcScore.append(2)
+        elif linkScore[i][0] > filterStats[i][0]+filterBounds[0]*filterStats[i][1]:
+            srcScore.append(1)
+        else:
+            srcScore.append(0)
+        if linkScore[i][1] > filterStats[i][0]+filterBounds[1]*filterStats[i][1]:
+            trgScore.append(2)
+        elif linkScore[i][1] > filterStats[i][0]+filterBounds[0]*filterStats[i][1]:
+            trgScore.append(1)
+        else:
+            trgScore.append(0)
+    
+    ## selection rule
+    if selectionRule == "OR":
+        if max(srcScore)+max(trgScore) >= 3:
+            return(True)
+    elif selectionRule == "AND":
+        votes = 0
+        for i in range(len(unsignedData.keys())):
+            if srcScore[i]+trgScore[i] >= 3:
+                votes += 0
+        if votes == len(unsignedData.keys()):
+            return(True)
+    elif selectionRule == "MAIN":
+        if srcScore[0]+trgScore[0] >= 3:
+            return(True)
+    return(False)
+
+def getGroupSize(node, rgr):
+    if node in rgr.edge:
+        groupList = []
+        for source in rgr.edge[node]:
+            edgePass = False
+            for edge in rgr.edge[node][source]:
+                if rgr.edge[node][source][edge]["interaction"] in ["component>", "member>"]:
+                    edgePass = True
+            if edgePass:
+                groupList.append(source)
+        return(len(groupList))
+    else:
+        return(0)
+
+def filterGeneGroups(subnetGraph, globalGraph, cutoff = 0.5):
+    """clean filter"""
+    outputGraph = deepcopy(subnetGraph)
+    routputGraph = reverseGraph(outputGraph)
+    rglobalGraph = reverseGraph(globalGraph)
+    groupNodes = []
+    for node in subnetGraph.node:
+        if subnetGraph.node[node]["type"] in ["complex", "family"]:
+            groupNodes.append(node)
+    deleteNodes = ["-"]
+    while (len(deleteNodes) > 0):
+        deleteNodes = []
+        for node in groupNodes:
+            top = getGroupSize(node, routputGraph)
+            bottom = getGroupSize(node, rglobalGraph)
+            if bottom == 0:
+                pass
+            elif float(top)/float(bottom) < cutoff:
+                deleteNodes.append(node)
+        groupNodes = list(set(groupNodes) - set(deleteNodes))
+        for node in deleteNodes:
+            outputGraph.remove_node(node)
+            routputGraph.remove_node(node)
+    return(outputGraph)
+
+def filterGoodHub(subnetGraph, globalGraph, nodeScore, nodeThreshold,
+                  childrenTypes = ["protein"], childrenThreshold = 3,
+                  includeThreshold = 0.5):
+    ## initialize output variables
+    oNodes = deepcopy(sNodes)
+    oInteractions = deepcopy(sInteractions)
+    
+    ## build reverse
+    rgInteractions = reverseInteractions(gInteractions)
+    
+    ## identify all hubs
+    badHubs  = set()
+    goodHubs = set()
+    childrenMap = {}
+    for node in gNodes:
+        childrenMap[node] = set()
+        if node in gInteractions:
+            for child in gInteractions[node]:
+                if gNodes[child] in childrenTypes:
+                    childrenMap[node].update([child])
+        if node not in oNodes:
+            if len(childrenMap[node]) >= childrenThreshold:
+                badHubs.update([node])
+    
+    ## iteratively add good hubs
+    hubScore = {}
+    currentCount = 1
+    currentNodes = []
+    while (currentCount > 0):
+        currentCount = 0
+        currentNodes = []
+        currentHubs = deepcopy(badHubs)
+        ## identify hubs to add
+        for hub in currentHubs:
+            goodChildren = set()
+            for child in childrenMap[hub]:
+                if child in nodeScore:
+                    if nodeScore[child] >= nodeThreshold:
+                        goodChildren.update([child])
+                if child in goodHubs:
+                    goodChildren.update([child])
+            if float(len(goodChildren))/float(len(childrenMap[hub])) >= includeThreshold:
+                log("> %s\n" % (hub))
+                goodHubs.update([hub])
+                badHubs.remove(hub)
+                currentCount += 1
+                currentNodes.append(hub)
+                for child in childrenMap[hub]:
+                    if child not in oNodes:
+                        currentNodes.append(child)
+        ## connect new good hubs
+        while len(currentNodes) > 0:
+            node = currentNodes.pop(0)
+            oNodes[node] = gNodes[node]
+            if node in gInteractions:
+                for target in gInteractions[node]:
+                    if target in oNodes:
+                        if node not in oInteractions:
+                            oInteractions[node] = {}
+                        oInteractions[node][target] = gInteractions[node][target]
+            if node in rgInteractions:
+                for source in rgInteractions[node]:
+                    if source in oNodes:
+                        if source not in oInteractions:
+                            oInteractions[source] = {}
+                        oInteractions[source][node] = rgInteractions[node][source]
+    return(oNodes, oInteractions)
+
+def PATHMARK(files, globalPathway, pathmarkFeatures = None, forcedStats = None,
+             filterBounds = [0, 0], outputDirectory = None, selectionRule = "OR",
+             topDisconnected = 100, applyGoodHubFilter = False):
     filterString = "%s_%s" % (filterBounds[0], filterBounds[1])
     
     ## read global pathway
-    (gNodes, gInteractions) = rPathway(globalPathway)
+    f = open(globalPathway, "r")
+    globalGraph = read_paradigm_graph(f)
+    f.close()
     
     ## read scores
-    uData = {}
-    sData = {}
+    signedData = {}
+    unsignedData = {}
     for i in range(len(files)):
-        uData[i] = rCRSData(files[i])
-        sData[i] = {}
-        for j in uData[i].keys():
-            sData[i][j] = {}
-            for k in uData[i][j].keys():
+        signedData[i] = rCRSData(files[i])
+        unsignedData[i] = {}
+        for j in signedData[i].keys():
+            unsignedData[i][j] = {}
+            for k in signedData[i][j].keys():
                 try:
-                    sData[i][j][k] = abs(float(uData[i][j][k]))
+                    unsignedData[i][j][k] = abs(float(signedData[i][j][k]))
                 except ValueError:
-                    sData[i][j][k] = "NA"
+                    unsignedData[i][j][k] = "NA"
     
     ## iterate features
-    for feature in sData[0].keys():
-        if features is not None:
-            if feature not in features:
+    for feature in unsignedData[0].keys():
+        if pathmarkFeatures is not None:
+            if feature not in pathmarkFeatures:
                 continue
-        pNodes = {}
-        pInteractions = {}
+        ## initiate pathmark graph
+        pathmarkGraph = networkx.MultiDiGraph()
         
         ## compute score statistics
-        pStats = []
-        if statLine is None:
-            for i in range(len(sData.keys())):
-                pStats.append(median_mad(sData[i][feature].values()))
+        filterStats = []
+        if forcedStats is None:
+            for i in range(len(unsignedData.keys())):
+                filterStats.append(median_mad(unsignedData[i][feature].values()))
         else:
-            for i in re.split(",",statLine):
-                (v1, v2) = re.split(";",i)
-                pStats.append((float(v1), float(v2)))
+            for i in forcedStats.split(","):
+                (v1, v2) = i.split(";")
+                filterStats.append((float(v1), float(v2)))
         
         ## log statistics
-        log("%s\t%s;%s" % (feature, pStats[0][0], pStats[0][1]), file = logFile)
-        for i in range(1, len(pStats)):
-            log(",%s;%s" % (pStats[i][0], pStats[i][1]), file = logFile)
+        log("%s\t%s;%s" % (feature, filterStats[0][0], filterStats[0][1]), file = logFile)
+        for i in range(1, len(filterStats)):
+            log(",%s;%s" % (filterStats[i][0], filterStats[i][1]), file = logFile)
         log("\n", file = logFile)
         
         ## add top scoring links
-        for source in gInteractions.keys():
-            if source not in sData[0][feature]:
+        for source in globalGraph.edge:
+            if source not in unsignedData[0][feature]:
                 continue
-            elif sData[0][feature][source] == "NA":
+            elif unsignedData[0][feature][source] == "NA":
                 continue
-            for target in gInteractions[source].keys():
-                if target not in sData[0][feature]:
+            for target in globalGraph.edge[source]:
+                if target not in unsignedData[0][feature]:
                     continue
-                elif sData[0][feature][target] == "NA":
+                elif unsignedData[0][feature][target] == "NA":
                     continue
                 
-                if selectLink(feature, source, target, sData, pStats, filterBounds, selectionRule = selectionRule):
-                    (pNodes, pInteractions) = addLink(source, target, pNodes, pInteractions, gNodes, gInteractions)
+                if selectLink(feature, source, target, unsignedData, filterStats,
+                              filterBounds, selectionRule = selectionRule):
+                    if source not in pathmarkGraph.node:
+                        pathmarkGraph.add_node(source,
+                                               type = globalGraph.node[source]["type"])
+                    if target not in pathmarkGraph.node:
+                        pathmarkGraph.add_node(target,
+                                               type = globalGraph.node[target]["type"])
+                    for edge in globalGraph.edge[source][target]:
+                        pathmarkGraph.add_edge(source, target, interaction =
+                                    globalGraph.edge[source][target][edge]["interaction"])
         
         ## add top scoring disconnected nodes
         sortedTop = []
-        for node in sData[0][feature].keys():
-            if node not in gNodes:
+        for node in unsignedData[0][feature]:
+            if node not in globalGraph.node:
                 continue
-            if gNodes[node] in ["protein"]:
+            if globalGraph.node[node] in ["protein"]:
                 sortedTop.append(node)
-        sortedTop.sort(lambda x, y: cmp(sData[0][feature][y],sData[0][feature][x]))
-        while (sData[0][feature][sortedTop[0]] == "NA"):
-            sortedTop.pop(0)
-            if len(sortedTop) == 0:
-                break
-        for i in range(topDisconnected):
-            if i > len(sortedTop)-1:
-                break
-            if sData[0][feature][sortedTop[i]] < pStats[0][0]+filterBounds[0]*pStats[0][1]:
-                break
-            if sortedTop[i] not in pNodes:
-                pNodes[sortedTop[i]] = gNodes[sortedTop[i]]
-                pInteractions[sortedTop[i]] = {}
-                pInteractions[sortedTop[i]]["__DISCONNECTED__"] = "-disconnected-"
+        if len(sortedTop) > 0:
+            sortedTop.sort(lambda x, y: cmp(unsignedData[0][feature][y],unsignedData[0][feature][x]))
+            while (unsignedData[0][feature][sortedTop[0]] == "NA"):
+                sortedTop.pop(0)
+                if len(sortedTop) == 0:
+                    break
+            for i in range(topDisconnected):
+                if i > len(sortedTop)-1:
+                    break
+                if unsignedData[0][feature][sortedTop[i]] < filterStats[0][0]+filterBounds[0]*filterStats[0][1]:
+                    break
+                if sortedTop[i] not in pathmarkGraph.node:
+                    if "__DISCONNECTED__" not in pathmarkGraph.node:
+                        pathmarkGraph.add_node("__DISCONNECTED__", type = "abstract")
+                    pathmarkGraph.add_node(sortedTop[i],
+                                       type = globalGraph.node[sortedTop[i]]["type"])
+                    pathmarkGraph.add_edge(sortedTop[i], "__DISCONNECTED__",
+                                           interaction = "-disconnected-")
         
         ## apply filters
         if applyGoodHubFilter:
-            (pNodes, pInteractions) = filterGoodHub(pNodes, pInteractions, gNodes, gInteractions,
-                                                    sData[0][feature], pStats[0][0]+filterBounds[0]*pStats[0][1],
-                                                    childrenTypes = ["protein"],
-                                                    childrenThreshold = 3,
-                                                    includeThreshold = 0.5)
+            pass
+        #    (pNodes, pInteractions) = filterGoodHub(pNodes, pInteractions, gNodes, gInteractions,
+        #                                            unsignedData[0][feature], filterStats[0][0],
+        #                                            childrenTypes = ["protein"],
+        #                                            childrenThreshold = 3,
+        #                                            includeThreshold = 0.5)
+        pathmarkGraph = filterGeneGroups(pathmarkGraph, globalGraph)
         
         ## output networks
-        if outDir == None:
-            wrtDir = feature
+        if outputDirectory == None:
+            currentDirectory = feature
         else:
-            wrtDir = outDir
-        if not os.path.exists(wrtDir):
-            syscmd("mkdir %s" % (wrtDir))
-        (cpNodes, cpInteractions) = cleanFilter(pNodes, pInteractions, gNodes, gInteractions)
-        if outputPARADIGM:
-            wPARADIGM("%s/%s_%s_nodrug_pathway.tab" % (wrtDir, feature, filterString), pNodes, pInteractions)
-            if outputCleaned:
-                wPARADIGM("%s/%s_%s_nodrug_cleaned_pathway.tab" % (wrtDir, feature, filterString), cpNodes, cpInteractions)
-        else:
-            wSIF("%s/%s_%s_nodrug.sif" % (wrtDir, feature, filterString), pInteractions)
-            if outputCleaned:
-                wSIF("%s/%s_%s_nodrug_cleaned.sif" % (wrtDir, feature, filterString), cpInteractions)
-        if outputAttributes:
-            wNodeAttributes(feature, gNodes, uData[0], wrtDir)
+            currentDirectory = outputDirectory
+        if not os.path.exists(currentDirectory):
+            syscmd("mkdir %s" % (currentDirectory))
+        f = open("%s/%s_%s_nodrug.xgmml" % (currentDirectory, feature, filterString), "w")
+        write_cytoscape_xgmml(pathmarkGraph, f, signedData[0][feature])
+        f.close()
 
 if __name__ == "__main__":
     ## parse arguments
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "p:f:s:b:d:l:nthq")
+        opts, args = getopt.getopt(sys.argv[1:], "p:f:s:b:d:l:uq")
     except getopt.GetoptError, err:
         print str(err)
         usage(2)
@@ -174,38 +435,32 @@ if __name__ == "__main__":
         usage(1)
     
     globalPathway = None
-    features = None
-    statLine = None
-    filterBounds = [0,0]
-    outDir = None
-    outputAttributes = False
-    outputPARADIGM = False
+    pathmarkFeatures = None
+    forcedStats = None
+    filterBounds = [0, 0]
+    outputDirectory = None
     selectionRule = "OR"
     applyGoodHubFilter = False
     for o, a in opts:
         if o == "-p":
             globalPathway = a
         elif o == "-f":
-            features = re.split(";", a)
+            pathmarkFeatures = a.split(";")
         elif o == "-s":
-            statLine = a
-            if os.path.exists(statLine):
-                f = open(statLine, "r")
-                statLine = re.split("\t", f.readline().rstrip("\r\n"))[1]
+            forcedStats = a
+            if os.path.exists(forcedStats):
+                f = open(forcedStats, "r")
+                forcedStats = f.readline().rstrip().split("\t")[1]
                 f.close()
         elif o == "-b":
-            (v1, v2) = re.split(";", a)
+            (v1, v2) = a.split(";")
             filterBounds = [float(v1), float(v2)]
             filterBounds.sort()
         elif o == "-d":
-            outDir = a.rstrip("/")
+            outputDirectory = a.rstrip("/")
         elif o == "-l":
             logFile = a
-        elif o == "-n":
-            outputAttributes = True
-        elif o == "-t":
-            outputPARADIGM = True
-        elif o == "-h":
+        elif o == "-u":
             applyGoodHubFilter = True
         elif o == "-q":
             verbose = False
@@ -216,7 +471,7 @@ if __name__ == "__main__":
     assert globalPathway is not None
     
     ## run
-    PATHMARK(args, globalPathway, features = features, statLine = statLine, 
-             filterBounds = filterBounds, outDir = outDir, outputAttributes = outputAttributes, 
-             outputPARADIGM = outputPARADIGM, selectionRule = selectionRule, topDisconnected = 100,
-             applyGoodHubFilter = applyGoodHubFilter)
+    PATHMARK(args, globalPathway, pathmarkFeatures = pathmarkFeatures,
+             forcedStats = forcedStats,  filterBounds = filterBounds,
+             outputDirectory = outputDirectory, selectionRule = selectionRule,
+             topDisconnected = 100, applyGoodHubFilter = applyGoodHubFilter)
