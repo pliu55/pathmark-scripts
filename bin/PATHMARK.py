@@ -421,6 +421,10 @@ def PATHMARK(files, globalPathway, pathmarkFeatures = None, forcedStats = None,
         f = open("%s/%s_%s_nodrug.xgmml" % (currentDirectory, feature, filterString), "w")
         write_cytoscape_xgmml(pathmarkGraph, f, signedData[0][feature])
         f.close()
+        
+        f = open("%s/%s_%s_nodrug.xgmml" % (currentDirectory, feature, filterString), "w")
+        write_sif(pathmarkGraph, f)        
+        f.close()
 
 if __name__ == "__main__":
     ## parse arguments
