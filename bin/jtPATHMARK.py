@@ -276,7 +276,8 @@ class cleanup(Target):
     def run(self):
         os.chdir(self.directory)
         
-        system("rm -rf real* null* OCCAM__* background.R LAYOUT/*.params LAYOUT/NULL_*")
+        system("rm -rf real* null* OCCAM__* background.R LAYOUT/pid_* LAYOUT/*.params LAYOUT/NULL_* LAYOUT/stats_* LAYOUT/*.stats LAYOUT/null_results.*")
+        system("mv LAYOUT/real_results.all.tab LAYOUT/PATHMARK.score.tab")
         if self.outputZip is not None:
             system("zip -r LAYOUT.zip LAYOUT")
             system("mv -f LAYOUT.zip %s" % (self.outputZip))

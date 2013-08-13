@@ -238,24 +238,19 @@ def filterGeneGroups(subnetGraph, globalGraph, cutoff = 0.5):
 def filterGoodHub(subnetGraph, globalGraph, nodeScore, nodeThreshold,
                   childrenTypes = ["protein"], childrenThreshold = 3,
                   includeThreshold = 0.5):
-    ## initialize output variables
-    oNodes = deepcopy(sNodes)
-    oInteractions = deepcopy(sInteractions)
-    
-    ## build reverse
-    rgInteractions = reverseInteractions(gInteractions)
+    outputGraph = deepcopy(subnetGraph)
+    rglobalGraph = reverseGraph(globalGraph)
     
     ## identify all hubs
     badHubs  = set()
     goodHubs = set()
     childrenMap = {}
-    for node in gNodes:
+    for node in subnetGraph.node:
         childrenMap[node] = set()
-        if node in gInteractions:
-            for child in gInteractions[node]:
-                if gNodes[child] in childrenTypes:
-                    childrenMap[node].update([child])
-        if node not in oNodes:
+        for child in globalGraph.edge[node]:
+            if globalGraph.node[child]["type"] in childrenTypes:
+                childrenMap[node].update([child])
+        if node not in outputGraph.node:
             if len(childrenMap[node]) >= childrenThreshold:
                 badHubs.update([node])
     
@@ -282,26 +277,25 @@ def filterGoodHub(subnetGraph, globalGraph, nodeScore, nodeThreshold,
                 badHubs.remove(hub)
                 currentCount += 1
                 currentNodes.append(hub)
-                for child in childrenMap[hub]:
-                    if child not in oNodes:
+                for child in goodChildren:
+                    if child not in outputGraph.node:
                         currentNodes.append(child)
         ## connect new good hubs
         while len(currentNodes) > 0:
             node = currentNodes.pop(0)
-            oNodes[node] = gNodes[node]
-            if node in gInteractions:
-                for target in gInteractions[node]:
-                    if target in oNodes:
-                        if node not in oInteractions:
-                            oInteractions[node] = {}
-                        oInteractions[node][target] = gInteractions[node][target]
-            if node in rgInteractions:
-                for source in rgInteractions[node]:
-                    if source in oNodes:
-                        if source not in oInteractions:
-                            oInteractions[source] = {}
-                        oInteractions[source][node] = rgInteractions[node][source]
-    return(oNodes, oInteractions)
+            outputGraph.add_node(node, type = globalGraph.node[node]["type"])
+            for target in globalGraph.edge[node]:
+                if target in outputGraph.node:
+                    for edge in globalGraph.edge[node][target]:
+                        outputGraph.add_edge(node, target, interaction =
+                                    globalGraph.edge[node][target][edge]["interaction"])
+            for source in rglobalGraph.edge[node]:
+                if source in outputGraph.node:
+                    for edge in rglobalGraph.edge[node][source]:
+                        outputGraph.add_edge(source, node, interaction =
+                                    rglobalGraph.edge[node][source][edge]["interaction"])
+    
+    return(outputGraph)
 
 def PATHMARK(files, globalPathway, pathmarkFeatures = None, forcedStats = None,
              filterBounds = [0, 0], outputDirectory = None, selectionRule = "OR",
@@ -319,9 +313,9 @@ def PATHMARK(files, globalPathway, pathmarkFeatures = None, forcedStats = None,
     for i in range(len(files)):
         signedData[i] = rCRSData(files[i])
         unsignedData[i] = {}
-        for j in signedData[i].keys():
+        for j in signedData[i]:
             unsignedData[i][j] = {}
-            for k in signedData[i][j].keys():
+            for k in signedData[i][j]:
                 try:
                     unsignedData[i][j][k] = abs(float(signedData[i][j][k]))
                 except ValueError:
@@ -402,14 +396,13 @@ def PATHMARK(files, globalPathway, pathmarkFeatures = None, forcedStats = None,
                                            interaction = "-disconnected-")
         
         ## apply filters
-        if applyGoodHubFilter:
-            pass
-        #    (pNodes, pInteractions) = filterGoodHub(pNodes, pInteractions, gNodes, gInteractions,
-        #                                            unsignedData[0][feature], filterStats[0][0],
-        #                                            childrenTypes = ["protein"],
-        #                                            childrenThreshold = 3,
-        #                                            includeThreshold = 0.5)
         pathmarkGraph = filterGeneGroups(pathmarkGraph, globalGraph)
+        if applyGoodHubFilter:
+            pathmarkGraph = filterGoodHub(pathmarkGraph, globalGraph,
+                                          unsignedData[0][feature], filterStats[0][0],
+                                          childrenTypes = ["protein"],
+                                          childrenThreshold = 3,
+                                          includeThreshold = 0.5)
         
         ## output networks
         if outputDirectory == None:
