@@ -315,7 +315,11 @@ def main():
     if len(args) == 0:
         pathwayZip = options.pathwayZip if options.pathwayZip is not None else basepathway
         pathwayLib = os.path.join(options.workdir, "pathway")
-        system("unzip %s -d %s" % (pathwayZip, pathwayLib))
+        if pathwayZip.endswith(".zip"):
+            system("unzip %s -d %s" % (pathwayZip, pathwayLib))
+        else:
+            system("mkdir -p %s" % (pathwayLib))
+            system("cp %s %s" % (pathwayZip, pathwayLib))
         paradigmPathway = None
         for file in os.listdir(pathwayLib):
             if file.endswith("_pathway.tab"):
