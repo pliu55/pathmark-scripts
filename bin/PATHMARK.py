@@ -365,9 +365,11 @@ def diffuseHeat(signature_frame, global_graph, parameters):
         for target in reversed_networkx_graph.edge:
             for source in reversed_networkx_graph.edge[target]:
                 if pathmark_graph.node[node]['type'] in ['complex', 'family']:
-                
+                    ####
+                    pass
                 for edge in reversed_networkx_graph.edge[target][source]:
-                    
+                    ####
+                    pass
         return(collapsed_map, collapsed_graph)
     
     def expandNetworkX(diffused_heats, collapsed_map):
