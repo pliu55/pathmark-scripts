@@ -1,0 +1,27 @@
+<tool id="shazam-cytoscapeweb" name="SHAZAM to CytoscapeWeb" version="1.0">
+  <description>Pathmark</description>
+  <command interpreter="python">shazamCytoscapeWeb.py -t $summary_tsv -n $n_pathways -d $data_files -p $phenotype -i $pathway_dir -o $output_dir
+    #if str($signature_index) != 'None':
+     -s $signature_index
+    #end if
+    #if $circle
+     -c
+    #end if
+    #if str($legend_img) != 'None':
+     -l $legend_img
+    #end if
+  </command>
+  <inputs>
+	  <param name="summary_tsv" type="data" format="tsv" label="SHAZAM Summary File"/>
+	  <param name="n_pathways" type="integer" value="3" label="Number of Plots"/>
+	  <param name="data_files" type="data" format="matrix" label="Data Matricies (comma-separated)"/>
+	  <param name="phenotype" type="data" format="matrix" label="Cohort Phenotypes"/>
+	  <param name="pathway_dir" type="data" format="path" label="Directory Path for Constituent Pathways"/>
+	  <param name="signature_index" type="integer" value="1" label="Index of Data File to use for Node Sizes" optional="true"/>
+          <param name="circle" type="boolean" label="Represent Nodes as CirclePlots"/>
+          <param name="legend_img" type="data" format="image" label="Image File for Legend" optional="true"/>
+  </inputs>
+  <outputs>
+      <data name="output_dir" format="path" label="Output Directory Path"/>
+  </outputs>
+</tool>

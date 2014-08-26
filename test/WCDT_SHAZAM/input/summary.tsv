@@ -1,0 +1,11 @@
+Pathway Avg num Alterations	Total alterations	num genes	min mean truth	max mean truth	min mean any	max mean any	normalized activity
+IL23-mediated signaling events	2.0	70.0	27.0	-0.453	0.495	-0.106	0.339	43.101	
+HIF-2-alpha transcription factor network	3.0	105.0	27.0	-0.808	1.229	-0.103	0.227	38.611	
+Glucocorticoid receptor regulatory network	1.0	133.0	68.0	-1.389	3.453	-0.478	1.284	35.757	
+AR and ERG fusion pathway	1.0	37.0	31.0	-0.595	0.195	-0.397	0.216	28.294	
+FOXA1 transcription factor network	0.0	19.0	38.0	-0.977	0.167	-0.579	0.0	23.009	
+IL12-mediated signaling events	1.0	58.0	32.0	-0.489	0.536	-0.338	0.29	20.827	
+downregulated of mta-3 in er-negative breast tumors	1.0	28.0	15.0	-0.112	1.062	-0.167	0.178	20.363	
+hypoxia and p53 in the cardiovascular system	3.0	58.0	19.0	-0.097	0.427	-0.109	0.108	19.851	
+IL6-mediated signaling events	1.0	52.0	33.0	-0.384	0.333	-0.325	0.167	19.473	
+IL27-mediated signaling events	1.0	35.0	20.0	-0.54	0.303	-0.117	0.045	19.132	
