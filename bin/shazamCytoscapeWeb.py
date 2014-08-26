@@ -151,14 +151,14 @@ def shazamCytoscapeWeb():
                     l.write(cmd + '\n')
                     os.system(cmd)
                     os.chdir('../../..')
-                    cmd = 'python layoutCytoscapeWeb.py -s %s -p %s -i %s -o %s' % ('analysis/layout_files/pid_%s_%s/%s.tab' % (pathway_pid, signature_name, signature_name), '%s/%s' % (pathway_directory, pathway_file), 'analysis/layout_files/pid_%s_%s/img/' % (pathway_pid, signature_name), options.output_directory)
+                    cmd = 'layoutCytoscapeWeb.py -s %s -p %s -i %s -o %s' % ('analysis/layout_files/pid_%s_%s/%s.tab' % (pathway_pid, signature_name, signature_name), '%s/%s' % (pathway_directory, pathway_file), 'analysis/layout_files/pid_%s_%s/img/' % (pathway_pid, signature_name), options.output_directory)
                     if options.legend_file:
                         cmd += ' -l %s' % (options.legend_file)
                     l.write(cmd + '\n')
                     os.system(cmd)
                     l.close()
                 else:
-                    cmd = 'python layoutCytoscapeWeb.py -s %s -p %s -o %s' % ('analysis/layout_files/pid_%s_%s/%s.tab' % (pathway_pid, signature_name, signature_name), '%s/%s' % (pathway_directory, pathway_file), options.output_directory)
+                    cmd = 'layoutCytoscapeWeb.py -s %s -p %s -o %s' % ('analysis/layout_files/pid_%s_%s/%s.tab' % (pathway_pid, signature_name, signature_name), '%s/%s' % (pathway_directory, pathway_file), options.output_directory)
                     os.system(cmd)
     # shutil.rmtree('analysis/layout_files')
 
