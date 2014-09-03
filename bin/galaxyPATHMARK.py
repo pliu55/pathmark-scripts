@@ -58,6 +58,8 @@ def main():
         cmd += ' -b %s' % ('bootstrap_signature.tab')
     if options.output_file is not None:
         cmd += ' -o %s' % (options.output_file)
+    if options.pathway_file is not None:
+        cmd += ' -p %s' % (options.pathway_file)
     cmd += ' -f "%s"' % (options.filter_parameters)
     cmd += ' -t %s' % (options.heat_diffusion)
     if options.hub_filter:
