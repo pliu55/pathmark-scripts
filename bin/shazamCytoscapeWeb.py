@@ -147,7 +147,7 @@ def shazamCytoscapeWeb():
                         output_data_frame.to_csv('analysis/layout_files/pid_%s_%s/%s' % (pathway_pid, signature_name, data_file.split('/')[-1]), sep = '\t', index_label = 'id')
                     os.chdir('analysis/layout_files/pid_%s_%s' % (pathway_pid, signature_name))
                     sort_files = ['signature.circle', data_files[-1].split('/')[-1]]
-                    cmd = 'circlePlot.py -s include.samples -f include.features -r color.map -o \'%s;%s\' img/ signature.circle %s' % ('GLOBAL', ','.join(sort_files), ' '.join([data_file.split('/')[-1] for data_file in data_files]))
+                    cmd = 'circlePlot.py -s include.samples -f include.features -m color.map -o \'%s;%s\' img/ signature.circle %s' % ('GLOBAL', ','.join(sort_files), ' '.join([data_file.split('/')[-1] for data_file in data_files]))
                     l.write(cmd + '\n')
                     os.system(cmd)
                     os.chdir('../../..')
@@ -158,7 +158,7 @@ def shazamCytoscapeWeb():
                     os.system(cmd)
                     l.close()
                 else:
-                    cmd = 'layoutCytoscapeWeb.py -s %s -p %s -o %s' % ('analysis/layout_files/pid_%s_%s/%s.tab' % (pathway_pid, signature_name, signature_name), '%s/%s' % (pathway_directory, pathway_file), options.output_directory)
+                    cmd = 'python layoutCytoscapeWeb.py -s %s -p %s -o %s' % ('analysis/layout_files/pid_%s_%s/%s.tab' % (pathway_pid, signature_name, signature_name), '%s/%s' % (pathway_directory, pathway_file), options.output_directory)
                     os.system(cmd)
     # shutil.rmtree('analysis/layout_files')
 

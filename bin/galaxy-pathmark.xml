@@ -1,0 +1,27 @@
+<tool id="pathmark" name="Pathmark" version="1.0.2">
+  <description>Pathmark</description>
+  <command interpreter="python">jtPATHMARK.py --ipl $ipl --phenotype $phenotype --background $background --oz $report
+    #if str($pathway) != 'None':
+      --pathway $pathway
+    #end if
+    --filter "${filter_low};${filter_high}"
+    #if $hubfilter
+        --hub
+    #end if
+    -s $file_output
+  </command>
+  <inputs>
+	  <param name="ipl" type="data" format="ipl" label="PARADIGM IPL Matrix File"/>
+	  <param name="phenotype" type="data" format="matrix" label="Clinical Phenotype File"/>
+	  <param name="background" type="integer" value="0" label="Null Batches for Background Distribution"/>
+	  <param name="filter_low" type="float" value="0.0" label="Filtering Lower Parameters"/>
+	  <param name="filter_high" type="float" value="0.0" label="Filtering Upper Parameters"/>
+	  <param name="pathway" type="data" format="zip" label="Pathways Zip File" optional="true"/>
+        <param name="hubfilter" type="boolean" 
+            label="Keep hubs with a majority of active downsteam genes"/>
+  </inputs>
+  <outputs>
+      <data name="report" format="zip"/>
+      <data name="file_output" format="tabular" label="Pathmark differential scores "/>
+  </outputs>
+</tool>
