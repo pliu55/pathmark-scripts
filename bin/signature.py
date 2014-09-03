@@ -29,11 +29,11 @@ class Parameters:
     """
     def __init__(self):
         self.random_seed = 0
-        self.bootstrap_size = 100
+        self.bootstrap_size = 10
         self.bootstrap_proportion = 0.85
         self.bootstrap_replacement = False
         self.null_method = 'labels'
-        self.null_size = 100
+        self.null_size = 0
         self.signature_method = 'sam'
         self.signature_file = 'signature.tab'
 
