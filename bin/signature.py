@@ -22,19 +22,23 @@ from jobTree.scriptTree.stack import Stack
 null_prefixes = ['na_', 'nw_']          ## valid null samples must start with one of these
                                         ## prefixes and end in a sample name
 
+#### NOTE BLOCK
+#### - Test LIMMA and add in data counts check
+#### - Add in permute and paradigm null_method
+
 ## pm classes
 class Parameters:
     """
     Stores parameters used for this [signature.py specific]
     """
-    def __init__(self):
-        self.random_seed = 0
-        self.bootstrap_size = 10
-        self.bootstrap_proportion = 0.85
-        self.bootstrap_replacement = False
-        self.null_method = 'labels'
-        self.null_size = 0
-        self.signature_method = 'sam'
+    def __init__(self, random_seed = 0, bootstrap_size = 10, bootstrap_proportion = 0.85, bootstrap_replacement = False, null_method = 'labels', null_size = 0, signature_method = 'sam'):
+        self.random_seed = random_seed
+        self.bootstrap_size = bootstrap_size
+        self.bootstrap_proportion = bootstrap_proportion
+        self.bootstrap_replacement = bootstrap_replacement
+        self.null_method = null_method
+        self.null_size = null_size
+        self.signature_method = signature_method
         self.signature_file = 'signature.tab'
 
 class rpy2SignatureGenes:
@@ -87,6 +91,48 @@ class scipySignatureGenes:
         for feature, values in data_frame.iterrows():
             t_map[feature] = stats.ttest_ind(values[positive_samples], values[negative_samples], equal_var = False)[0]
         return(pandas.DataFrame(pandas.Series(t_map, name = 'T-statistic')))
+
+class rpy2LIMMA:
+    def __init__(self):
+        self.siggenes = importr('siggenes')
+    def calculate(self, method, data_frame, positive_samples, negative_samples):
+        ## construct matrix_r
+        r = robjects.r
+        samples = []
+        for sample in data_frame.axes[1]:
+            if sample in positive_samples + negative_samples:
+                samples.append(sample)
+        features = data_frame.axes[0]
+        matrix = data_frame[samples]
+        matrix_r = common.convert_to_r_matrix(matrix)
+        ## construct cls_r
+        cls = {}
+        for sample in samples:
+            if sample in positive_samples:
+                cls[sample] = 1
+            elif sample in negative_samples:
+                cls[sample] = 0
+        cls_r = common.convert_to_r_matrix( pandas.DataFrame( [cls] ) )
+        ## generate signature with method
+        sam_out = self.siggenes.sam(matrix_r, r.c(cls_r))
+        sam_att = r.cbind(
+            r.c(r.attributes(sam_out).rx2('d')),
+            r.c(r.attributes(sam_out).rx2('vec.false')),
+            r.c(r.attributes(sam_out).rx2('q.value')),
+            r.c(r.attributes(sam_out).rx2('p.value')),
+            r.c(r.attributes(sam_out).rx2('s'))
+        )
+        ## return results as a data_frame
+        ocols = ['Score', 'FalseCalls', 'Q-value', 'P-value', 'StdDev']
+        output = {}
+        for j, col in enumerate(ocols):
+            row = {}
+            for i, n in enumerate(features):
+                # print n, col, sam_att.rx(i + 1, j + 1)[0]
+                row[n] = sam_att.rx(i + 1, j + 1)[0]
+            # print row
+            output[col] = row
+        return(pandas.DataFrame(output))
 
 ## pm functions
 def logger(message, file = None, die = False):
@@ -228,7 +274,12 @@ class computeSignatures(Target):
             signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)
             signature_frame.columns = [self.signature_name]
             signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
-            
+        elif self.parameters.signature_method == 'limma':
+            siggenes = rpy2SignatureGenes()
+            signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)[['Score']]
+            signature_frame.columns = [self.signature_name]
+            signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
+
 class mergeAllSignatures(Target):
     def __init__(self, parameters, directory):
         Target.__init__(self, time=10000)
@@ -277,6 +328,9 @@ def main():
     parser.add_option('--jobFile', help='Add as child of jobFile rather than new jobTree')
     parser.add_option('-d', '--data', dest='data_file', default=None)
     parser.add_option('-p', '--phenotype', dest='phenotype_file', default=None)
+    parser.add_option('-m', '--method', dest='signature_method', default='sam')
+    parser.add_option('-n', '--null', dest='null_size', default=0)
+    parser.add_option('-b', '--bootstrap', dest='bootstrap_size', default=0)
     options, args = parser.parse_args()
     logger('Using Batch System : %s\n' % (options.batchSystem))
     
@@ -290,7 +344,9 @@ def main():
     assert(len(args) == 0)
     
     ## set parameters
-    parameters = Parameters()
+    parameters = Parameters(signature_method = options.signature_method,
+                            null_size = options.null_size,
+                            bootstrap_size = options.bootstrap_size)
     
     ## run
     s = Stack(branchSignatures(options.data_file,

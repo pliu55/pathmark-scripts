@@ -1,6 +1,6 @@
 <tool id="pathmark" name="PathMark" version="2.0">
   <description>PathMark</description>
-  <command interpreter="python">galaxyPATHMARK.py -d $data -p $phenotype -o $report
+  <command interpreter="python">galaxyPATHMARK.py -g -d $data -p $phenotype -o $report
     #if str($pathway) != 'None':
       -n $pathway
     #end if
