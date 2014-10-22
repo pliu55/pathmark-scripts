@@ -25,6 +25,7 @@ null_prefixes = ['na_', 'nw_']          ## valid null samples must start with on
 #### NOTE BLOCK
 #### - Test LIMMA and add in data counts check
 #### - Add in permute and paradigm null_method
+#### - Add method for dealing with either median or mean
 
 ## pm classes
 class Parameters:
@@ -51,9 +52,11 @@ class rpy2SignatureGenes:
         for sample in data_frame.axes[1]:
             if sample in positive_samples + negative_samples:
                 samples.append(sample)
-        features = data_frame.axes[0]
-        matrix = data_frame[samples]
-        matrix_r = common.convert_to_r_matrix(matrix)
+        samples.sort()
+        features = list(data_frame.axes[0])
+        features.sort()
+        matrix = data_frame[samples].loc[features]
+        matrix_r = common.convert_to_r_dataframe(matrix)
         ## construct cls_r
         cls = {}
         for sample in samples:
@@ -94,9 +97,10 @@ class scipySignatureGenes:
 
 class rpy2LIMMA:
     def __init__(self):
-        self.siggenes = importr('siggenes')
-    def calculate(self, method, data_frame, positive_samples, negative_samples):
-        ## construct matrix_r
+        self.edger = importr('edgeR')
+        self.limma = importr('limma')
+    def calculate(self, data_frame, positive_samples, negative_samples):
+        ## construct dataframe_r
         r = robjects.r
         samples = []
         for sample in data_frame.axes[1]:
@@ -106,15 +110,26 @@ class rpy2LIMMA:
         matrix = data_frame[samples]
         matrix_r = common.convert_to_r_matrix(matrix)
         ## construct cls_r
-        cls = {}
+        cls = []
         for sample in samples:
             if sample in positive_samples:
-                cls[sample] = 1
+                cls.append(1)
             elif sample in negative_samples:
-                cls[sample] = 0
-        cls_r = common.convert_to_r_matrix( pandas.DataFrame( [cls] ) )
-        ## generate signature with method
-        sam_out = self.siggenes.sam(matrix_r, r.c(cls_r))
+                cls.append(0)
+        cls_r = robjects.IntVector(cls)
+        ## generate signature with limma
+        dge = self.edger.DGEList(counts=matrix_r)
+        
+        isexpr = r.rowSums(edger.cpm(dge) > 10) >= 2 #### comparison not right for R
+        flt = dge[isexpr,]
+        tmm = calcNormFactors(flt)
+        design = model.matrix(~ contrast)
+        y = voom(tmm, design, plot=FALSE)
+        fit = eBayes(lmFit(y, design))
+        # cn = sprintf("contrast%s", as.character(levels(contrast)[2]))
+        # tt = topTable(fit, coef=cn, number=200)
+        # limma_out = sol = list(design=design, y=y, fit=fit, tt=tt)
+        
         sam_att = r.cbind(
             r.c(r.attributes(sam_out).rx2('d')),
             r.c(r.attributes(sam_out).rx2('vec.false')),
@@ -148,7 +163,10 @@ def logger(message, file = None, die = False):
     if die:
         sys.exit(1)
 
-def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse = True):
+def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse_sort = False):
+    """
+    Generates dichotomies for a given column in the phenotype file [signature.py specific]
+    """
     phenotype_map = phenotype_frame[phenotype]
     phenotype_is_categorical = True
     for element in set(phenotype_map.values):
@@ -160,7 +178,7 @@ def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse = True
             pass
     if phenotype_is_categorical:
         phenotype_categories = list(set(phenotype_map.values))
-        phenotype_categories.sort(reverse = reverse)
+        phenotype_categories.sort(reverse = reverse_sort)
         for index in range(len(phenotype_categories)):
             if index == 1 and len(phenotype_categories) == 2:
                 break
@@ -168,6 +186,8 @@ def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse = True
             positive_samples = list(set(phenotype_map[phenotype_map == phenotype_categories[index]].index) & set(data_samples))
             negative_samples = list(set(phenotype_map[phenotype_map != phenotype_categories[index]].index) & set(data_samples))
             yield(signature_name, positive_samples, negative_samples)
+    #### add method for dealing with either median or mean splits of dichotomies
+    #### what if we want to split by median or mean for integer counts?
 
 ## jt classes
 class branchSignatures(Target):
@@ -275,7 +295,9 @@ class computeSignatures(Target):
             signature_frame.columns = [self.signature_name]
             signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
         elif self.parameters.signature_method == 'limma':
-            siggenes = rpy2SignatureGenes()
+            limma = rpy2LIMMA()
+            
+            siggenes = scipySignatureGenes()
             signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)[['Score']]
             signature_frame.columns = [self.signature_name]
             signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
@@ -345,8 +367,8 @@ def main():
     
     ## set parameters
     parameters = Parameters(signature_method = options.signature_method,
-                            null_size = options.null_size,
-                            bootstrap_size = options.bootstrap_size)
+                            null_size = int(options.null_size),
+                            bootstrap_size = int(options.bootstrap_size))
     
     ## run
     s = Stack(branchSignatures(options.data_file,
