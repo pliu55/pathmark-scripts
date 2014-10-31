@@ -99,56 +99,86 @@ class rpy2LIMMA:
     def __init__(self):
         self.edger = importr('edgeR')
         self.limma = importr('limma')
-    def calculate(self, data_frame, positive_samples, negative_samples):
-        ## construct dataframe_r
-        r = robjects.r
+    def calculate(self, data_frame, positive_samples, negative_samples, output_file):
+        ## construct matrix_r
+        # r = robjects.r
         samples = []
         for sample in data_frame.axes[1]:
             if sample in positive_samples + negative_samples:
                 samples.append(sample)
-        features = data_frame.axes[0]
-        matrix = data_frame[samples]
-        matrix_r = common.convert_to_r_matrix(matrix)
+        samples.sort()
+        features = list(data_frame.axes[0])
+        features.sort()
+        matrix = data_frame[samples].loc[features]
+        # matrix_r = common.convert_to_r_matrix(matrix)
+        matrix_file = '%s.input' % (output_file)
+        matrix.to_csv(matrix_file, sep = '\t', index_label = 'id')
+        
         ## construct cls_r
-        cls = []
+        # cls = []
+        # for sample in samples:
+        #     if sample in positive_samples:
+        #         cls.append(1)
+        #     elif sample in negative_samples:
+        #         cls.append(0)
+        # cls_r = robjects.IntVector(cls)
+        cls_file = '%s.contrast' % (output_file)
+        o = open(cls_file, 'w')
+        o.write('sample\tcluster\n')
         for sample in samples:
             if sample in positive_samples:
-                cls.append(1)
+                o.write('%s\t+\n' % (sample))
             elif sample in negative_samples:
-                cls.append(0)
-        cls_r = robjects.IntVector(cls)
-        ## generate signature with limma
-        dge = self.edger.DGEList(counts=matrix_r)
+                o.write('%s\t-\n' % (sample))
+        o.close()
         
-        isexpr = r.rowSums(edger.cpm(dge) > 10) >= 2 #### comparison not right for R
-        flt = dge[isexpr,]
-        tmm = calcNormFactors(flt)
-        design = model.matrix(~ contrast)
-        y = voom(tmm, design, plot=FALSE)
-        fit = eBayes(lmFit(y, design))
+        ## generate signature with limma
+        # dge = self.edger.DGEList(counts=matrix_r)
+        
+        # isexpr = r.rowSums(edger.cpm(dge) > 10) >= 2 #### comparison not right for R
+        # flt = dge[isexpr,]
+        # tmm = calcNormFactors(flt)
+        # design = model.matrix(~ contrast)
+        # y = voom(tmm, design, plot=FALSE)
+        # fit = eBayes(lmFit(y, design))
         # cn = sprintf("contrast%s", as.character(levels(contrast)[2]))
         # tt = topTable(fit, coef=cn, number=200)
         # limma_out = sol = list(design=design, y=y, fit=fit, tt=tt)
         
-        sam_att = r.cbind(
-            r.c(r.attributes(sam_out).rx2('d')),
-            r.c(r.attributes(sam_out).rx2('vec.false')),
-            r.c(r.attributes(sam_out).rx2('q.value')),
-            r.c(r.attributes(sam_out).rx2('p.value')),
-            r.c(r.attributes(sam_out).rx2('s'))
-        )
+        # sam_att = r.cbind(
+        #     r.c(r.attributes(sam_out).rx2('d')),
+        #     r.c(r.attributes(sam_out).rx2('vec.false')),
+        #     r.c(r.attributes(sam_out).rx2('q.value')),
+        #     r.c(r.attributes(sam_out).rx2('p.value')),
+        #     r.c(r.attributes(sam_out).rx2('s'))
+        # )
+        
         ## return results as a data_frame
-        ocols = ['Score', 'FalseCalls', 'Q-value', 'P-value', 'StdDev']
-        output = {}
-        for j, col in enumerate(ocols):
-            row = {}
-            for i, n in enumerate(features):
-                # print n, col, sam_att.rx(i + 1, j + 1)[0]
-                row[n] = sam_att.rx(i + 1, j + 1)[0]
-            # print row
-            output[col] = row
-        return(pandas.DataFrame(output))
-
+        # ocols = ['Score', 'FalseCalls', 'Q-value', 'P-value', 'StdDev']
+        # output = {}
+        # for j, col in enumerate(ocols):
+        #     row = {}
+        #     for i, n in enumerate(features):
+        #         # print n, col, sam_att.rx(i + 1, j + 1)[0]
+        #         row[n] = sam_att.rx(i + 1, j + 1)[0]
+        #     # print row
+        #     output[col] = row
+        # return(pandas.DataFrame(output))
+        output_name = output_file.split('/')[-1]
+        result_file = '%s.result' % (output_file)
+        top_file = '%s.top_100.tab' % (output_name)
+        plot_file = '%s.plot.pdf' % (output_name)
+        cmd = 'Rscript limma_ng.R %s %s 100 %s %s %s' % (matrix_file, cls_file, result_file, top_file, plot_file)
+        os.system(cmd)
+        result_frame = pandas.read_csv(result_file, sep = '\t', index_col = 0)
+        os.remove(matrix_file)
+        os.remove(cls_file)
+        os.remove(result_file)
+        if output_name.startswith('_n') or output_name.startswith('_b'):
+            os.remove(top_file)
+            os.remove(plot_file)
+        return(pandas.DataFrame(result_frame.icol(1)))
+        
 ## pm functions
 def logger(message, file = None, die = False):
     """
@@ -290,15 +320,13 @@ class computeSignatures(Target):
             signature_frame.columns = [self.signature_name]
             signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
         elif self.parameters.signature_method == 'ttest':
-            siggenes = scipySignatureGenes()
-            signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)
+            scipy = scipySignatureGenes()
+            signature_frame = scipy.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)
             signature_frame.columns = [self.signature_name]
             signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
         elif self.parameters.signature_method == 'limma':
             limma = rpy2LIMMA()
-            
-            siggenes = scipySignatureGenes()
-            signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)[['Score']]
+            signature_frame = limma.calculate(self.data_frame, self.positive_samples, self.negative_samples, self.output_file)
             signature_frame.columns = [self.signature_name]
             signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
 
@@ -337,7 +365,7 @@ class mergeAllSignatures(Target):
             null_signature_frame.to_csv('null_%s' % (self.parameters.signature_file), sep = '\t', index_label = 'id')
         
         ## remove signature_files
-        shutil.rmtree('analysis/signature_files')
+        # shutil.rmtree('analysis/signature_files')
         
 def main():
     ## check for fresh run
