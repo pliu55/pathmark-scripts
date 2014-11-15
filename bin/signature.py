@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 """
 signature.py
-
-Author: Sam Ng
-Last Updated: 2014-06-23
+    by Sam Ng
 """
 import math, os, random, re, shutil, sys, types
 from copy import deepcopy
@@ -23,9 +21,9 @@ null_prefixes = ['na_', 'nw_']          ## valid null samples must start with on
                                         ## prefixes and end in a sample name
 
 #### NOTE BLOCK
-#### - Test LIMMA and add in data counts check
+#### - Convert LIMMA code to rpy2
 #### - Add in permute and paradigm null_method
-#### - Add method for dealing with either median or mean
+#### - Add method for dealing with either median or mean dichotomies of continuous data
 
 ## pm classes
 class Parameters:
