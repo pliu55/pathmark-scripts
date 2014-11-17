@@ -1,24 +1,27 @@
-<tool id="pathmark" name="PathMark" version="2.0">
+<tool id="galaxy-pathmark" name="PathMark" version="2.0">
   <description>PathMark</description>
-  <command interpreter="python">galaxyPATHMARK.py -g -d $data -p $phenotype -o $report
-    #if str($pathway) != 'None':
-      -n $pathway
-    #end if
-    -f "${filter_low};${filter_high}"
-    #if $hubfilter
-        -u
-    #end if
+  <command interpreter="python">galaxyPATHMARK.py
+-f "${filter_low};${filter_high}"
+#if $hubfilter
+  -u
+#end if
+-o $report
+$data
+$phenotype
+$pathway
   </command>
   <inputs>
-	  <param name="data" type="data" format="matrix" label="Data Matrix File"/>
-	  <param name="phenotype" type="data" format="matrix" label="Clinical Phenotype File"/>
-	  <param name="filter_low" type="float" value="0.0" label="Filtering Lower Parameters"/>
-	  <param name="filter_high" type="float" value="0.0" label="Filtering Upper Parameters"/>
-	  <param name="pathway" type="data" format="tabular" label="Pathway File or Directory" optional="true"/>
-        <param name="hubfilter" type="boolean" 
-            label="Keep hubs with a majority of active downsteam genes"/>
+    <param name="data" type="data" format="matrix" label="Data Matrix File"/>
+    <param name="phenotype" type="data" format="matrix" label="Clinical Phenotype File"/>
+    <param name="pathway" type="data" format="tabular" label="Pathway File or Directory"/>
+    <param name="filter_low" type="float" value="0.0" label="Filtering Lower Parameters"/>
+    <param name="filter_high" type="float" value="0.0" label="Filtering Upper Parameters"/>
+    <param name="hubfilter" type="boolean" label="Keep hubs with a majority of active downsteam genes"/>
   </inputs>
   <outputs>
-      <data name="report" format="directory"/>
+      <data name="report" format="zip"/>
   </outputs>
+    <help>
+Wrapper for PathMark.  
+    </help>
 </tool>

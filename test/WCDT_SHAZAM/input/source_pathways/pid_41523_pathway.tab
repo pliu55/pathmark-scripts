@@ -1,7 +1,0 @@
-smallMolecule	ATP
-smallMolecule	ADP
-protein	CDC25A
-CDC25A	ADP	-a>
-CDC25A	CDC25A	-a>
-ATP	ADP	-a>
-ATP	CDC25A	-a>

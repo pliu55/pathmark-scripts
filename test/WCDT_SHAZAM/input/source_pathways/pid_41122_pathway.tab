@@ -1,6 +1,0 @@
-complex	palmitoylated, myristoylated eNOS dimer
-complex	eNOS:NOSIP
-protein	NOSIP
-eNOS:NOSIP	eNOS:NOSIP	-a>
-palmitoylated, myristoylated eNOS dimer	eNOS:NOSIP	component>
-NOSIP	eNOS:NOSIP	component>

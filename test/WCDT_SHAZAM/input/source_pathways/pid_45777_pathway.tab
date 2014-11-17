@@ -1,7 +1,0 @@
-protein	MAPK
-abstract	degradation
-protein	DSP
-DSP	degradation	-ap>
-MAPK	MAPK	-a>
-MAPK	DSP	-t>
-DSP	MAPK	-a>

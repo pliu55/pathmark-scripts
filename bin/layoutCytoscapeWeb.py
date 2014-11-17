@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-"""layoutCytoscapeWeb.py
-
-Author: Sam Ng
-Last Updated: 2014-06-13
+"""
+layoutCytoscapeWeb.py
+    by Sam Ng
 """
 import math, os, re, shutil, sys
 from copy import deepcopy
@@ -183,7 +182,7 @@ html_tail = """                ';
 </html>
 """
 
-class rgb:
+class RGB:
     def __init__(self,r,g,b):
         self.r = int(round(r))
         self.g = int(round(g))
@@ -205,16 +204,16 @@ class rgb:
         r = self.r
         g = self.g
         b = self.b
-        hexchars = '0123456789ABCDEF'
-        return('#' + hexchars[r/16]+hexchars[r%16]+hexchars[g/16]+hexchars[g%16]+hexchars[b/16]+hexchars[b%16])
+        hexchars = "0123456789ABCDEF"
+        return("#" + hexchars[r/16]+hexchars[r%16]+hexchars[g/16]+hexchars[g%16]+hexchars[b/16]+hexchars[b%16])
 
-def getColor(value, min_value = -10, max_value = 10, min_color = rgb(0, 0, 255), max_color = rgb(255, 0, 0), zero_color = rgb(255, 255, 255)):
+def getColor(value, min_value = -10, max_value = 10, min_color = RGB(0, 0, 255), max_color = RGB(255, 0, 0), zero_color = RGB(255, 255, 255)):
     try:
         fvalue = float(value)
         if fvalue != fvalue:
             raise ValueError
     except ValueError:
-        color = rgb(200, 200, 200)
+        color = RGB(200, 200, 200)
         return(color.tohex())
     if fvalue < 0.0:
         if fvalue < min_value:
@@ -231,7 +230,7 @@ def getColor(value, min_value = -10, max_value = 10, min_color = rgb(0, 0, 255),
     r = fvalue*float(color.r - zero_color.r) + zero_color.r
     g = fvalue*float(color.g - zero_color.g) + zero_color.g
     b = fvalue*float(color.b - zero_color.b) + zero_color.b
-    color = rgb(r, g, b)
+    color = RGB(r, g, b)
     return(color.tohex())
 
 def getSize(value, min_value = -10, max_value = 10, min_size = 20, max_size = 100):
@@ -255,12 +254,17 @@ def getSize(value, min_value = -10, max_value = 10, min_size = 20, max_size = 10
 
 def layoutCytoscapeWeb():
     ## parse arguments
-    parser = OptionParser(usage = '%prog [options]')
-    parser.add_option('-s', '--signature', dest='signature_file', default=None)
-    parser.add_option('-p', '--pathway', dest='pathway_file', default=None)
-    parser.add_option('-i', '--image', dest='image_directory', default=None)
-    parser.add_option('-l', '--legend', dest='legend_file', default=None)
-    parser.add_option('-o', '--output', dest='output_directory', default=None)
+    parser = OptionParser(usage = "%prog [options]")
+    parser.add_option("-s", "--signature", dest = "signature_file", default = None,
+                      help = "")
+    parser.add_option("-p", "--pathway", dest = "pathway_file", default = None,
+                      help = "")
+    parser.add_option("-i", "--image", dest = "image_directory", default = None,
+                      help = "")
+    parser.add_option("-l", "--legend", dest = "legend_file", default = None,
+                      help = "")
+    parser.add_option("-o", "--output", dest = "output_directory", default = None,
+                      help = "")
     options, args = parser.parse_args()
     
     assert(len(args) == 0)
@@ -269,7 +273,7 @@ def layoutCytoscapeWeb():
     cytoscape_pathway = Pathway(options.pathway_file)
     
     ## read signature_file
-    signature_frame = pandas.read_csv(options.signature_file, sep = '\t', index_col = 0)
+    signature_frame = pandas.read_csv(options.signature_file, sep = "\t", index_col = 0)
     signatures = list(signature_frame.columns)
     for signature in signatures:
         signature_map = signature_frame[signature]
@@ -301,40 +305,40 @@ def layoutCytoscapeWeb():
                                 <data key="score">%s</data>\\
                                 <data key="image">%s</data>\\
                             </node>\\
-                            """ % (len(cytoscape_pathway.nodes), 'LEGEND', '', 'legend', '#FFFFFF', 250, 0, 'img/%s' % (options.legend_file.split('/')[-1]))
+                            """ % (len(cytoscape_pathway.nodes), "LEGEND", "", "legend", "#FFFFFF", 250, 0, "img/%s" % (options.legend_file.split("/")[-1]))
         
         image_files = []
         for node in cytoscape_pathway.nodes:
-            if cytoscape_pathway.nodes[node] == '__DISCONNECTED__':
+            if cytoscape_pathway.nodes[node] == "__DISCONNECTED__":
                 node_name = node
-                node_label = ''
-                node_type = 'abstract'
-                node_color = '#FFFFFF'
+                node_label = ""
+                node_type = "abstract"
+                node_color = "#FFFFFF"
                 node_size = 15
                 node_score = 0
-                node_image = ''
+                node_image = ""
             else:
                 node_name = node
-                if cytoscape_pathway.nodes[node] == 'protein':
+                if cytoscape_pathway.nodes[node] == "protein":
                     node_label = node
                 else:
-                    node_label = ''
+                    node_label = ""
                 node_type = cytoscape_pathway.nodes[node]
                 if node in signature_map:
                     node_color = getColor(signature_map[node], min_value = signature_min, max_value = signature_max)
                     node_size = getSize(signature_map[node], min_value = signature_min, max_value = signature_max)
                     node_score = signature_map[node]
                 else:
-                    node_color = '#FFFFFF'
+                    node_color = "#FFFFFF"
                     node_size = 20
                     node_score = 0
-                node_image = ''
+                node_image = ""
                 if options.image_directory is not None:
-                    if os.path.exists('%s/%s.png' % (options.image_directory, re.sub('[:/]', '_', node))):
-                        image_files.append('%s/%s.png' % (options.image_directory, re.sub('[:/]', '_', node)))
-                        node_image = 'img/%s.png' % (re.sub('[:/]', '_', node))
-                        node_type = 'plot'
-                        node_color = '#FFFFFF'
+                    if os.path.exists("%s/%s.png" % (options.image_directory, re.sub("[:/]", "_", node))):
+                        image_files.append("%s/%s.png" % (options.image_directory, re.sub("[:/]", "_", node)))
+                        node_image = "img/%s.png" % (re.sub("[:/]", "_", node))
+                        node_type = "plot"
+                        node_color = "#FFFFFF"
             
             graphml_content += """       <node id="%s">\\
                                 <data key="name">%s</data>\\
@@ -348,7 +352,7 @@ def layoutCytoscapeWeb():
                             """ % (node_map[node], node_name, node_label, node_type, node_color, node_size, node_score, node_image)
         for source in cytoscape_pathway.interactions:
             for target in cytoscape_pathway.interactions[source]:
-                for interaction in cytoscape_pathway.interactions[source][target].split(';'):
+                for interaction in cytoscape_pathway.interactions[source][target].split(";"):
                     graphml_content += """   <edge source="%s" target="%s">\\
                                     <data key="interaction">%s</data>\\
                                 </edge>\\
@@ -360,17 +364,17 @@ def layoutCytoscapeWeb():
         ## launch cytoscape
         if not os.path.exists(options.output_directory):
             os.mkdir(options.output_directory)
-        cytoscape_directory = '%s/%s_%s' % (options.output_directory, options.pathway_file.split('/')[-1].rstrip('_pathway.tab'), signature)
+        cytoscape_directory = "%s/%s_%s" % (options.output_directory, options.pathway_file.split("/")[-1].rstrip("_pathway.tab"), signature)
         assert(not os.path.exists(cytoscape_directory))
         os.mkdir(cytoscape_directory)
-        os.mkdir('%s/img' % (cytoscape_directory))
-        f = open('%s/%s.html' % (cytoscape_directory, signature), 'w')
+        os.mkdir("%s/img" % (cytoscape_directory))
+        f = open("%s/%s.html" % (cytoscape_directory, signature), "w")
         f.write(html_head % (signature) + graphml_content + html_tail)
         f.close()
         for image_file in image_files:
-            shutil.copy(image_file, '%s/img' % (cytoscape_directory))
+            shutil.copy(image_file, "%s/img" % (cytoscape_directory))
         if options.legend_file:
-            shutil.copy(options.legend_file, '%s/img' % (cytoscape_directory))
+            shutil.copy(options.legend_file, "%s/img" % (cytoscape_directory))
         
 if __name__ == "__main__":
     layoutCytoscapeWeb()

@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 """
 PATHMARK.py
-
-Author: Sam Ng
-Last Updated: 2014-06-13
+    by Sam Ng
 """
-import math, os, random, re, sys, types
+import logging, math, os, random, re, sys, types
 from copy import deepcopy
 
 import pandas
@@ -17,8 +15,11 @@ from optparse import OptionParser
 from jobTree.scriptTree.target import Target
 from jobTree.scriptTree.stack import Stack
 
-#### TODO:
-####       Add in option to collapse the input pathway
+#### NOTE BLOCK
+#### - Add in option to collapse the input pathway
+
+## logger
+logging.basicConfig(filename="signature.log", level=logging.INFO)
 
 ## pm classes
 class Parameters:
@@ -27,12 +28,12 @@ class Parameters:
     """
     def __init__(self, pathway_file, filter_parameters, diffusion_time, hub_filter):
         self.pathway_file = pathway_file
-        self.filter_parameters = [float(i) for i in filter_parameters.split(';')]
+        self.filter_parameters = [float(i) for i in filter_parameters.split(";")]
         self.filter_parameters.sort()
         self.top_disconnected = 100
         self.heat_diffusion_time = float(diffusion_time)
         self.hub_filter = hub_filter
-        self.parameters_string = '%s_%s' % (self.filter_parameters[0], self.filter_parameters[1])
+        self.parameters_string = "%s_%s" % (self.filter_parameters[0], self.filter_parameters[1])
 
 class Pathway:
     """
@@ -49,15 +50,15 @@ class Pathway:
         elif type(input) == types.StringType:
             (self.nodes, self.interactions) = self.readSPF(input)
         else:
-            logger('ERROR: invalid input for pathway import (%s)\n' % (input), die = True)
+            logger("ERROR: invalid input for pathway import (%s)\n" % (input), die = True)
     def readSPF(self, input_file):
         nodes = {}
         interactions = {}
-        f = open(input_file, 'r')
+        f = open(input_file, "r")
         for line in f:
             if line.isspace():
                 continue
-            pline = line.rstrip().split('\t')
+            pline = line.rstrip().split("\t")
             if len(pline) == 2:
                 nodes[pline[1]] = pline[0]
             elif len(pline) == 3:
@@ -66,26 +67,26 @@ class Pathway:
                 if pline[1] not in interactions[pline[0]]:
                     interactions[pline[0]][pline[1]] = pline[2]
                 else:
-                    interactions[pline[0]][pline[1]] += ';' + pline[2]
+                    interactions[pline[0]][pline[1]] += ";" + pline[2]
             else:
-                logger('ERROR: line length not 2 or 3 (%s)\n' % (line), die = True)
+                logger("ERROR: line length not 2 or 3 (%s)\n" % (line), die = True)
         f.close()
         return(nodes, interactions)
     def writeSPF(self, output_file, reverse = False):
-        o = open(output_file, 'w')
+        o = open(output_file, "w")
         for node in self.nodes:
-            o.write('%s\t%s\n' % (self.nodes[node], node))
+            o.write("%s\t%s\n" % (self.nodes[node], node))
         for source in self.interactions:
             for target in self.interactions[source]:
-                for interaction in self.interactions[source][target].split(';'):
-                    o.write('%s\t%s\t%s\n' % (source, target, interaction))
+                for interaction in self.interactions[source][target].split(";"):
+                    o.write("%s\t%s\t%s\n" % (source, target, interaction))
         o.close()
     def writeSIF(self, output_file):
-        o = open(output_file, 'w')
+        o = open(output_file, "w")
         for source in self.interactions:
             for target in self.interactions[source]:
-                for interaction in self.interactions[source][target].split(';'):
-                    o.write('%s\t%s\t%s\n' % (source, interaction, target))
+                for interaction in self.interactions[source][target].split(";"):
+                    o.write("%s\t%s\t%s\n" % (source, interaction, target))
         o.close()
     def networkx(self):
         networkx_graph = networkx.MultiDiGraph()
@@ -93,7 +94,7 @@ class Pathway:
             networkx_graph.add_node(node, type = self.nodes[node])
         for source in self.interactions:
             for target in self.interactions[source]:
-                for interaction in self.interactions[source][target].split(';'):
+                for interaction in self.interactions[source][target].split(";"):
                     networkx_graph.add_edge(source, target, interaction = interaction)
         return(networkx_graph)
     def reverse(self):
@@ -201,8 +202,8 @@ class Pathway:
                 if target not in self.interactions[source]:
                     self.interactions[source][target] = append_pathway.interactions[source][target]
                 else:
-                    self.interactions[source][target] = ';'.join(list(set(self.interactions[source][target].split(';')) |
-                                                                      set(append_pathway.interactions[source][target].split(';'))))
+                    self.interactions[source][target] = ";".join(list(set(self.interactions[source][target].split(";")) |
+                                                                      set(append_pathway.interactions[source][target].split(";"))))
 
 ## pm functions
 def logger(message, file = None, die = False):
@@ -212,7 +213,7 @@ def logger(message, file = None, die = False):
     if file is None:
         sys.stderr.write(message)
     else:
-        o = open(file, 'a')
+        o = open(file, "a")
         o.write(message)
         o.close()
     if die:
@@ -234,9 +235,9 @@ def diffuseHeat(signature_frame, global_graph, parameters):
             self.kernel = None
             self.labels = None
         def readKernel(self, kernel_file):
-            self.kernel = coo_matrix(genfromtxt(kernel_file, delimiter = '\t')[1:, 1:])
-            f = open(kernel_file, 'r')
-            self.labels = f.readline().rstrip().split('\t')[1:]
+            self.kernel = coo_matrix(genfromtxt(kernel_file, delimiter = "\t")[1:, 1:])
+            f = open(kernel_file, "r")
+            self.labels = f.readline().rstrip().split("\t")[1:]
             f.close()
         def makeKernel(self, networkx_graph, diffusion_time = 0.1):
             ## parse the network, build the graph laplacian
@@ -249,9 +250,9 @@ def diffuseHeat(signature_frame, global_graph, parameters):
                 index2node[i] = node_order[i]   
                 node2index[node_order[i]] = i
             ## construct the diagonals
-            row = array('i')
-            col = array('i')
-            data = array('f')
+            row = array("i")
+            col = array("i")
+            data = array("f")
             for i in range(0, num_nodes):
                 ## diag entries: out degree
                 degree = 0 
@@ -284,7 +285,7 @@ def diffuseHeat(signature_frame, global_graph, parameters):
             for i,j,v in zip(cx.row, cx.col, cx.data):
                 a = self.index2node[i]
                 b = self.index2node[j]
-                print '\t'.join([a,b,str(v)])
+                print "\t".join([a,b,str(v)])
         def parseGraph(self, networkx_graph):
             edges = set()
             nodes = set()
@@ -305,7 +306,7 @@ def diffuseHeat(signature_frame, global_graph, parameters):
                     degrees[target] += 1
             return (edges, nodes, degrees)
         def writeKernel(self, output_file):
-            o = open(output_file, 'w')
+            o = open(output_file, "w")
             cx = self.kernel.tocoo()
             edges = {}
             for i, j, v in zip(cx.row, cx.col, cx.data):
@@ -314,16 +315,16 @@ def diffuseHeat(signature_frame, global_graph, parameters):
                 edges[(a, b)] = str(v)
             ## iterate through rows
             ## sort labels in alphabetical order
-            o.write('Key\t' + '\t'.join(sorted(self.labels)) + '\n')
+            o.write("Key\t" + "\t".join(sorted(self.labels)) + "\n")
             for nodeA in sorted(self.labels):
                 printstr = nodeA
                 # through columns
                 for nodeB in sorted(self.labels):
                     if (nodeA, nodeB) in edges:
-                        printstr += '\t' + edges[(nodeA, nodeB)]	
+                        printstr += "\t" + edges[(nodeA, nodeB)]	
                     else:
-                        printstr += '\t0'
-                o.write(printstr + '\n')
+                        printstr += "\t0"
+                o.write(printstr + "\n")
             o.close()
         def kernelMultiplyOne(self, vector):
             array = []
@@ -364,7 +365,7 @@ def diffuseHeat(signature_frame, global_graph, parameters):
         reversed_networkx_graph = reverseNetworkX(networkx_graph)
         for target in reversed_networkx_graph.edge:
             for source in reversed_networkx_graph.edge[target]:
-                if pathmark_graph.node[node]['type'] in ['complex', 'family']:
+                if pathmark_graph.node[node]["type"] in ["complex", "family"]:
                     ####
                     pass
                 for edge in reversed_networkx_graph.edge[target][source]:
@@ -377,14 +378,14 @@ def diffuseHeat(signature_frame, global_graph, parameters):
         return(0)
      
     ## https://github.com/ucscCancer/pathway_tools/blob/master/scripts/diffuse.py
-    kernel_file = 'analysis/kernels/%s.kernel' % ('.'.join(parameters.pathway_file.split('/')[-1].split('.')[:-1]))
+    kernel_file = "analysis/kernels/%s.kernel" % (".".join(parameters.pathway_file.split("/")[-1].split(".")[:-1]))
     diffuser = SciPYKernel()
     if os.path.exists(kernel_file):
         diffuser.readKernel(kernel_file)
     else:
         diffuser.makeKernel(global_graph, diffusion_time = parameters.heat_diffusion_time)
-        if not os.path.exists('analysis/kernels'):
-            os.mkdir('analysis/kernels')
+        if not os.path.exists("analysis/kernels"):
+            os.mkdir("analysis/kernels")
         diffuser.writeKernel(kernel_file)
     input_heats = abs(signature_frame.icol(0))
     diffused_heats = pandas.DataFrame(pandas.Series(diffuser.diffuse(input_heats, reverse = False), name = signature_frame.columns[0]))
@@ -405,7 +406,7 @@ def convertListToFloat(input_list):
             continue
     return(float_list)
 
-def computeMean(input_list, null = 'NA', return_sd = False, sample_sd = True):
+def computeMean(input_list, null = "NA", return_sd = False, sample_sd = True):
     """
     Computes mean and optionally the sd [2014-6-7]
     Dependencies: convertListToFloat
@@ -431,7 +432,7 @@ def computeMean(input_list, null = 'NA', return_sd = False, sample_sd = True):
     else:
         return(mean)
 
-def computeMedian(input_list, null = 'NA', return_mad = False):
+def computeMedian(input_list, null = "NA", return_mad = False):
     """
     Computes median and optionally the mad [2014-6-7]
     Dependencies: convertListToFloat
@@ -456,15 +457,15 @@ def computeMedian(input_list, null = 'NA', return_mad = False):
             mad = computeMedian(ad_list)
             return(median, mad)
 
-def computeStatistics(score_frame, method = 'median'):
+def computeStatistics(score_frame, method = "median"):
     """
     Passthrough function for computing statistics [PATHMARK.py specific]
     Dependencies: computeMean, computeMedian, convertListToFloat
     """
     values = [value[0] for value in score_frame.values.tolist()]
-    if method == 'mean':
+    if method == "mean":
         score_statistics = computeMean(values, return_sd = True)
-    elif method == 'median':
+    elif method == "median":
         score_statistics = computeMedian(values, return_mad = True)
     return(score_statistics)
 
@@ -505,13 +506,13 @@ def getPathmark(score_frame, global_graph, parameters, forced_statistics = None)
             if abs(edge_values[0]) >= score_thresholds[0] and abs(edge_values[1]) >= score_thresholds[1]:
                 if source not in pathmark_graph.node:
                     pathmark_graph.add_node(source,
-                                            type = global_graph.node[source]['type'])
+                                            type = global_graph.node[source]["type"])
                 if target not in pathmark_graph.node:
                     pathmark_graph.add_node(target,
-                                            type = global_graph.node[target]['type'])
+                                            type = global_graph.node[target]["type"])
                 for edge in global_graph.edge[source][target]:
                     pathmark_graph.add_edge(source, target, interaction =
-                                            global_graph.edge[source][target][edge]['interaction'])
+                                            global_graph.edge[source][target][edge]["interaction"])
     
     ## store high scoring isolated nodes
     sorted_nodes = []
@@ -519,7 +520,7 @@ def getPathmark(score_frame, global_graph, parameters, forced_statistics = None)
         if node not in global_graph.node:
             continue
         node_value = float(score_frame.icol(0)[node])
-        if global_graph.node[node]['type'] in ['protein'] and node_value == node_value:
+        if global_graph.node[node]["type"] in ["protein"] and node_value == node_value:
             sorted_nodes.append(node)
     if len(sorted_nodes) > 0:
         sorted_nodes.sort(lambda x, y: cmp(float(score_frame.icol(0)[y]), float(score_frame.icol(0)[x])))
@@ -529,12 +530,12 @@ def getPathmark(score_frame, global_graph, parameters, forced_statistics = None)
             if abs(float(score_frame.icol(0)[sorted_nodes[index]])) < score_thresholds[1]:
                 break
             if sorted_nodes[index] not in pathmark_graph.node:
-                if '__DISCONNECTED__' not in pathmark_graph.node:
-                    pathmark_graph.add_node('__DISCONNECTED__', type = 'abstract')
+                if "__DISCONNECTED__" not in pathmark_graph.node:
+                    pathmark_graph.add_node("__DISCONNECTED__", type = "abstract")
                 pathmark_graph.add_node(sorted_nodes[index],
-                                        type = global_graph.node[sorted_nodes[index]]['type'])
-                pathmark_graph.add_edge(sorted_nodes[index], '__DISCONNECTED__',
-                                        interaction = '-disconnected-')
+                                        type = global_graph.node[sorted_nodes[index]]["type"])
+                pathmark_graph.add_edge(sorted_nodes[index], "__DISCONNECTED__",
+                                        interaction = "-disconnected-")
     
     ## doing a pass through all nodes to catch self-interactions
     for node in pathmark_graph.node:
@@ -542,7 +543,7 @@ def getPathmark(score_frame, global_graph, parameters, forced_statistics = None)
             if node in global_graph.edge[node]:
                 for edge in global_graph.edge[node][node]:
                     pathmark_graph.add_edge(node, node, interaction =
-                                            global_graph.edge[node][node][edge]['interaction'])
+                                            global_graph.edge[node][node][edge]["interaction"])
     ## note that edges will be missed if both nodes were between the two thresholds
     return(pathmark_graph)
 
@@ -552,12 +553,12 @@ def reverseNetworkX(networkx_graph):
     """
     reversed_networkx_graph = networkx.MultiDiGraph()
     for node in networkx_graph.node:
-        reversed_networkx_graph.add_node(node, type = networkx_graph.node[node]['type'])
+        reversed_networkx_graph.add_node(node, type = networkx_graph.node[node]["type"])
     for source in networkx_graph.edge:
         for target in networkx_graph.edge[source]:
             for edge in networkx_graph.edge[source][target]:
                 reversed_networkx_graph.add_edge(target, source,
-                             interaction = networkx_graph.edge[source][target][edge]['interaction'])
+                             interaction = networkx_graph.edge[source][target][edge]["interaction"])
     return(reversed_networkx_graph)
 
 def filterGeneGroups(pathmark_graph, global_graph, include_threshold = 0.5):
@@ -571,7 +572,7 @@ def filterGeneGroups(pathmark_graph, global_graph, include_threshold = 0.5):
             for source in reversed_graph.edge[node]:
                 edge_valid = False
                 for edge in reversed_graph.edge[node][source]:
-                    if reversed_graph.edge[node][source][edge]['interaction'] in ['component>', 'member>']:
+                    if reversed_graph.edge[node][source][edge]["interaction"] in ["component>", "member>"]:
                         edge_valid = True
                 if edge_valid:
                     group_list.append(source)
@@ -584,9 +585,9 @@ def filterGeneGroups(pathmark_graph, global_graph, include_threshold = 0.5):
     reversed_global_graph = reverseNetworkX(global_graph)
     group_nodes = []
     for node in pathmark_graph.node:
-        if pathmark_graph.node[node]['type'] in ['complex', 'family']:
+        if pathmark_graph.node[node]["type"] in ["complex", "family"]:
             group_nodes.append(node)
-    remove_nodes = ['']
+    remove_nodes = [""]
     while(len(remove_nodes) > 0):
         remove_nodes = []
         for node in group_nodes:
@@ -617,7 +618,7 @@ def filterGoodHub(pathmark_graph, global_graph, score_map, nodeThreshold, childr
     for node in subnetGraph.node:
         childrenMap[node] = set()
         for child in globalGraph.edge[node]:
-            if globalGraph.node[child]['type'] in childrenTypes:
+            if globalGraph.node[child]["type"] in childrenTypes:
                 childrenMap[node].update([child])
         if node not in outputGraph.node:
             if len(childrenMap[node]) >= childrenThreshold:
@@ -669,7 +670,7 @@ def getLargestSubgraph(pathmark_graph):
     subgraphs = networkx.weakly_connected_component_subgraphs(pathmark_graph)
     if len(subgraphs) == 0:
         largest_subgraph = networkx.MultiDiGraph()
-    elif '__DISCONNECTED__' in subgraphs[0].node:
+    elif "__DISCONNECTED__" in subgraphs[0].node:
         if len(subgraphs) == 1:
             largest_subgraph = networkx.MultiDiGraph()
         else:
@@ -678,16 +679,16 @@ def getLargestSubgraph(pathmark_graph):
         largest_subgraph = subgraphs[0]
     return(largest_subgraph)
 
-def readNetworkXSIF(input_file, node_type_map = None, default_node_type = 'abstract'):
+def readNetworkXSIF(input_file, node_type_map = None, default_node_type = "abstract"):
     """
     Read in a SIF format file into a networkx object [PATHMARK.py specific]
     """
     networkx_graph = networkx.MultiDiGraph()
-    f = open(input_file, 'r')
+    f = open(input_file, "r")
     for line in f:
         if line.isspace():
             continue
-        (source, interaction, target) = line.rstrip().split('\t')
+        (source, interaction, target) = line.rstrip().split("\t")
         if source not in networkx_graph.node:
             if node_type_map is not None:
                 if source in node_type_map:
@@ -708,26 +709,26 @@ def readNetworkXSIF(input_file, node_type_map = None, default_node_type = 'abstr
     f.close()
     return(networkx_graph)
 
-def writeNetworkXSIF(output_file, networkx_graph, edge_type_field = 'interaction'):
+def writeNetworkXSIF(output_file, networkx_graph, edge_type_field = "interaction"):
     """
     Write a SIF format file from a networkx object [PATHMARK.py specific]
     """
-    o = open(output_file, 'w')
+    o = open(output_file, "w")
     for (source, target, data) in networkx_graph.edges_iter(data = True):
-        interaction = data.get(edge_type_field, 'pp')
-        o.write('%s\t%s\t%s\n' % (source, interaction, target))
+        interaction = data.get(edge_type_field, "pp")
+        o.write("%s\t%s\t%s\n" % (source, interaction, target))
     o.close()
 
-def writeNetworkXSPF(output_file, networkx_graph, edge_type_field = 'interaction'):
+def writeNetworkXSPF(output_file, networkx_graph, edge_type_field = "interaction"):
     """
     Write a SPF format file from a networkx object [PATHMARK.py specific]
     """
-    o = open(output_file, 'w')
+    o = open(output_file, "w")
     for node in networkx_graph.node:
-        o.write('%s\t%s\n' % (str(networkx_graph.node[node]['type']), node))
+        o.write("%s\t%s\n" % (str(networkx_graph.node[node]["type"]), node))
     for (source, target, data) in networkx_graph.edges_iter(data = True):
-        interaction = data.get(edge_type_field, 'pp')
-        o.write('%s\t%s\t%s\n' % (source, interaction, target))
+        interaction = data.get(edge_type_field, "pp")
+        o.write("%s\t%s\t%s\n" % (source, interaction, target))
     o.close()
 
 def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, score_map, bootstrap_map):
@@ -735,137 +736,136 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
     Write a Cytoscape XGMML format file from a networkx object [PATHMARK.py specific]
     """
     doc = Document()
-    graph_node = doc.createElement('graph')
-    graph_node.setAttribute('xmlns', 'http://www.cs.rpi.edu/XGMML')
-    graph_node.setAttribute('xmlns:dc', 'http://purl.org/dc/elements/1.1/')
-    graph_node.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
-    graph_node.setAttribute('xmlns:rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#')
-    graph_node.setAttribute('xmlns:cy', 'http://www.cytoscape.org')
-    graph_node.setAttribute('directed', '1')
+    graph_node = doc.createElement("graph")
+    graph_node.setAttribute("xmlns", "http://www.cs.rpi.edu/XGMML")
+    graph_node.setAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/")
+    graph_node.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
+    graph_node.setAttribute("xmlns:rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+    graph_node.setAttribute("xmlns:cy", "http://www.cytoscape.org")
+    graph_node.setAttribute("directed", "1")
     doc.appendChild(graph_node)
     name_map = {}
     for i, n in enumerate(networkx_graph.node):
         name_map[n] = i
-        node = doc.createElement('node')
-        node.setAttribute('label', str(n))
-        node.setAttribute('id', str(i))
+        node = doc.createElement("node")
+        node.setAttribute("label", str(n))
+        node.setAttribute("id", str(i))
         ## set type string
-        att_node = doc.createElement('att')
-        att_node.setAttribute('name', 'TYPE')
-        att_node.setAttribute('value', str(networkx_graph.node[n]['type']))
-        att_node.setAttribute('type', 'string')
+        att_node = doc.createElement("att")
+        att_node.setAttribute("name", "TYPE")
+        att_node.setAttribute("value", str(networkx_graph.node[n]["type"]))
+        att_node.setAttribute("type", "string")
         node.appendChild(att_node)
         ## set label string
-        att_node = doc.createElement('att')
-        att_node.setAttribute('name', 'LABEL')
-        if networkx_graph.node[n]['type'] == 'protein':
-            att_node.setAttribute('value', str(n))
+        att_node = doc.createElement("att")
+        att_node.setAttribute("name", "LABEL")
+        if networkx_graph.node[n]["type"] == "protein":
+            att_node.setAttribute("value", str(n))
         else:
-            att_node.setAttribute('value', '')
-        att_node.setAttribute('type', 'string')
+            att_node.setAttribute("value", "")
+        att_node.setAttribute("type", "string")
         node.appendChild(att_node)
         ## set signature values
-        att_node = doc.createElement('att')
-        att_node.setAttribute('name', 'SIGNATURE')
+        att_node = doc.createElement("att")
+        att_node.setAttribute("name", "SIGNATURE")
         if str(n) in signature_map:
-            att_node.setAttribute('value', str(signature_map[str(n)]))
+            att_node.setAttribute("value", str(signature_map[str(n)]))
         else:
-            att_node.setAttribute('value', '0')
-        att_node.setAttribute('type', 'real')
+            att_node.setAttribute("value", "0")
+        att_node.setAttribute("type", "real")
         node.appendChild(att_node)
         ## set score values
-        att_node = doc.createElement('att')
-        att_node.setAttribute('name', 'SCORE')
+        att_node = doc.createElement("att")
+        att_node.setAttribute("name", "SCORE")
         if str(n) in score_map:
-            att_node.setAttribute('value', str(score_map[str(n)]))
+            att_node.setAttribute("value", str(score_map[str(n)]))
         else:
-            att_node.setAttribute('value', '0')
-        att_node.setAttribute('type', 'real')
+            att_node.setAttribute("value", "0")
+        att_node.setAttribute("type", "real")
         node.appendChild(att_node)
         ## set bootstrap values
-        att_node = doc.createElement('att')
-        att_node.setAttribute('name', 'BOOTSTRAP')
+        att_node = doc.createElement("att")
+        att_node.setAttribute("name", "BOOTSTRAP")
         if str(n) in bootstrap_map:
-            att_node.setAttribute('value', str(bootstrap_map[str(n)]))
+            att_node.setAttribute("value", str(bootstrap_map[str(n)]))
         else:
-            att_node.setAttribute('value', '0')
-        att_node.setAttribute('type', 'real')
+            att_node.setAttribute("value", "0")
+        att_node.setAttribute("type", "real")
         node.appendChild(att_node)
         graph_node.appendChild(node)
 
     for source in networkx_graph.edge:
         for target in networkx_graph.edge[source]:
             for edge in networkx_graph.edge[source][target]:
-                edge_node = doc.createElement('edge')
-                edge_node.setAttribute('label', '%s - %s' % (source, target))
-                edge_node.setAttribute('source', str(name_map[source]))
-                edge_node.setAttribute('target', str(name_map[target]))
+                edge_node = doc.createElement("edge")
+                edge_node.setAttribute("label", "%s - %s" % (source, target))
+                edge_node.setAttribute("source", str(name_map[source]))
+                edge_node.setAttribute("target", str(name_map[target]))
                 ## set edge attributes
                 for key, value in networkx_graph.edge[source][target][edge].items():
-                    att_node = doc.createElement('att')
-                    att_node.setAttribute('name', key)
-                    att_node.setAttribute('value', str(value))
+                    att_node = doc.createElement("att")
+                    att_node.setAttribute("name", key)
+                    att_node.setAttribute("value", str(value))
                     if type(value) == float:
-                        att_node.setAttribute('type', 'real')
+                        att_node.setAttribute("type", "real")
                     elif type(value) == int:
-                        att_node.setAttribute('type', 'integer')
+                        att_node.setAttribute("type", "integer")
                     else:
-                        att_node.setAttribute('type', 'string')
+                        att_node.setAttribute("type", "string")
                     edge_node.appendChild(att_node)
                 ## set bootstrap values
-                att_node = doc.createElement('att')
-                att_node.setAttribute('name', 'BOOTSTRAP')
+                att_node = doc.createElement("att")
+                att_node.setAttribute("name", "BOOTSTRAP")
                 if (str(source), str(target)) in bootstrap_map:
-                    att_node.setAttribute('value', str(bootstrap_map[(str(source), str(target))]))
+                    att_node.setAttribute("value", str(bootstrap_map[(str(source), str(target))]))
                 else:
-                    att_node.setAttribute('value', '0')
-                att_node.setAttribute('type', 'real')
+                    att_node.setAttribute("value", "0")
+                att_node.setAttribute("type", "real")
                 edge_node.appendChild(att_node)
                 graph_node.appendChild(edge_node)
-    o = open(output_file, 'w')
-    doc.writexml(o, addindent = ' ', newl = '\n')
+    o = open(output_file, "w")
+    doc.writexml(o, addindent = " ", newl = "\n")
     o.close()
 
 ## jt classes
 class branchPATHMARK(Target):
-    def __init__(self, signature_file, null_file, bootstrap_file, global_pathway, output_file, parameters, directory):
+    def __init__(self, signature_file, null_file, bootstrap_file, global_pathway, parameters, directory):
         Target.__init__(self, time=10000)
         self.signature_file = signature_file
         self.null_file = null_file
         self.bootstrap_file = bootstrap_file
         self.global_pathway = global_pathway
-        self.output_file = output_file
         self.parameters = parameters
         self.directory = directory
     def run(self):
         os.chdir(self.directory)
-        if not os.path.exists('analysis'):
-            os.mkdir('analysis')
+        if not os.path.exists("analysis"):
+            os.mkdir("analysis")
         
         ## convert global_pathway to global_graph
         global_graph = self.global_pathway.networkx()
         
         ## read input files
-        real_frame = pandas.read_csv(self.signature_file, sep = '\t', index_col = 0)
+        real_frame = pandas.read_csv(self.signature_file, sep = "\t", index_col = 0)
         real_signatures = list(real_frame.columns)
         null_frame = None
         null_signatures = []
         if self.null_file:
-            null_frame = pandas.read_csv(self.null_file, sep = '\t', index_col = 0)
+            null_frame = pandas.read_csv(self.null_file, sep = "\t", index_col = 0)
             null_signatures = list(null_frame.columns)
         bootstrap_frame = None
         bootstrap_signatures = []
         if self.bootstrap_file:
-            bootstrap_frame = pandas.read_csv(self.bootstrap_file, sep = '\t', index_col = 0)
+            bootstrap_frame = pandas.read_csv(self.bootstrap_file, sep = "\t", index_col = 0)
             bootstrap_signatures = list(bootstrap_frame.columns)
         
         ## iterate over signatures
         signature_map = {}
         score_map = {}
         for signature in real_signatures:
-            assert(not signature.startswith('_'))
-            signature_directory = 'analysis/%s' % (signature)
-            signature_sif = '%s_%s.sif' % (signature, self.parameters.parameters_string)
+            assert(not signature.startswith("_"))
+            signature_directory = "analysis/%s" % (signature)
+            signature_sif = "%s_%s.sif" % (signature, self.parameters.parameters_string)
             if not os.path.exists(signature_directory):
                 os.mkdir(signature_directory)
             else:
@@ -886,14 +886,14 @@ class branchPATHMARK(Target):
             signature_graph = filterGeneGroups(signature_graph, global_graph)
             # if self.parameters.hub_filter:
             #      signature_graph = filterGoodHub(signature_graph, global_graph)
-            writeNetworkXSIF('%s/%s' % (signature_directory, signature_sif), signature_graph)
+            writeNetworkXSIF("%s/%s" % (signature_directory, signature_sif), signature_graph)
             signature_map[signature] = deepcopy(signature_frame.icol(0))
             score_map[signature] = deepcopy(score_frame.icol(0))
             ## generate bootstrap PATHMARKs
             bootstraps = filter(lambda x: x.startswith(signature), bootstrap_signatures)
             for bootstrap in bootstraps:
-                bootstrap_index = bootstrap.split(':')[-1]
-                self.addChildTarget(queuePATHMARK('%s/_b%s_%s' % (signature_directory, bootstrap_index, signature_sif),
+                bootstrap_index = bootstrap.split(":")[-1]
+                self.addChildTarget(queuePATHMARK("%s/_b%s_%s" % (signature_directory, bootstrap_index, signature_sif),
                                                   bootstrap_frame[[bootstrap]],
                                                   global_graph,
                                                   self.parameters,
@@ -902,8 +902,8 @@ class branchPATHMARK(Target):
             ## generate null PATHMARKs
             nulls = filter(lambda x: x.startswith(signature), null_signatures)
             for null in nulls:
-                null_index = null.split(':')[-1]
-                self.addChildTarget(queuePATHMARK('%s/_n%s_%s' % (signature_directory, null_index, signature_sif),
+                null_index = null.split(":")[-1]
+                self.addChildTarget(queuePATHMARK("%s/_n%s_%s" % (signature_directory, null_index, signature_sif),
                                                   null_frame[[null]],
                                                   global_graph,
                                                   self.parameters,
@@ -962,15 +962,15 @@ class analyzeGraphStatistics(Target):
         null_map = {}
         for signature in self.signatures:
             ## store real_graph
-            real_file = '%s_%s.sif' % (signature, self.parameters.parameters_string)
-            real_graph = readNetworkXSIF('analysis/%s/%s' % (signature, real_file), node_type_map = self.global_pathway.nodes)
+            real_file = "%s_%s.sif" % (signature, self.parameters.parameters_string)
+            real_graph = readNetworkXSIF("analysis/%s/%s" % (signature, real_file), node_type_map = self.global_pathway.nodes)
             graph_map[signature] = deepcopy(real_graph)
             ## compute node_occurrences
             bootstrap_counts = {}
             bootstrap_occurences = {}
-            bootstrap_files = filter(lambda x: x.startswith('_b'), os.listdir('analysis/%s' % (signature)))
+            bootstrap_files = filter(lambda x: x.startswith("_b"), os.listdir("analysis/%s" % (signature)))
             for bootstrap_file in bootstrap_files:
-                bootstrap_graph = readNetworkXSIF('analysis/%s/%s' % (signature, bootstrap_file), node_type_map = self.global_pathway.nodes)
+                bootstrap_graph = readNetworkXSIF("analysis/%s/%s" % (signature, bootstrap_file), node_type_map = self.global_pathway.nodes)
                 bootstrap_nodes = set(bootstrap_graph.node)
                 for node in bootstrap_nodes:
                     if node not in bootstrap_counts:
@@ -991,9 +991,9 @@ class analyzeGraphStatistics(Target):
                 bootstrap_map[signature] = {}
             ## compute null_statistics
             null_statistics = []
-            null_files = filter(lambda x: x.startswith('_n'), os.listdir('analysis/%s' % (signature)))
+            null_files = filter(lambda x: x.startswith("_n"), os.listdir("analysis/%s" % (signature)))
             for null_file in null_files:
-                null_graph = readNetworkXSIF('analysis/%s/%s' % (signature, null_file), node_type_map = self.global_pathway.nodes)
+                null_graph = readNetworkXSIF("analysis/%s/%s" % (signature, null_file), node_type_map = self.global_pathway.nodes)
                 null_nodes = set(null_graph.node)
                 null_node_count = len(null_nodes)
                 null_edges = set([(i[1], i[0]) for i in set(null_graph.edges_iter())]) | set(null_graph.edges_iter())
@@ -1030,29 +1030,29 @@ class generateOutput(Target):
         self.directory = directory
     def run(self):
         os.chdir(self.directory)
-        if not os.path.exists('report'):
-            os.mkdir('report')
+        if not os.path.exists("report"):
+            os.mkdir("report")
         
         ## iterate over signatures
         for signature in self.signatures:
             ## output xgmml, sif, and table
-            writeNetworkXCytoscapeXGMML('report/%s_%s.xgmml' % (signature, self.parameters.parameters_string),
+            writeNetworkXCytoscapeXGMML("report/%s_%s.xgmml" % (signature, self.parameters.parameters_string),
                                         self.graph_map[signature],
                                         self.signature_map[signature],
                                         self.score_map[signature],
                                         self.bootstrap_map[signature])
-            writeNetworkXSIF('report/%s_%s.sif' % (signature, self.parameters.parameters_string),
+            writeNetworkXSIF("report/%s_%s.sif" % (signature, self.parameters.parameters_string),
                              self.graph_map[signature])
             if len(self.bootstrap_map[signature]) > 0:
-                o = open('report/%s_%s.bootstrap.tab' % (signature, self.parameters.parameters_string), 'w')
+                o = open("report/%s_%s.bootstrap.tab" % (signature, self.parameters.parameters_string), "w")
                 for node in self.bootstrap_map[signature]:
-                    o.write('%s\t%s\n' % (node, self.bootstrap_map[signature][node]))
+                    o.write("%s\t%s\n" % (node, self.bootstrap_map[signature][node]))
                 o.close()
                 pandas.DataFrame([self.signature_map[signature], self.score_map[signature]],
-                                 index = ['Signature','Score']).transpose().to_csv('report/%s_%s.tab' % (signature, self.parameters.parameters_string), sep = '\t', na_rep = 'nan')
+                                 index = ["Signature","Score"]).transpose().to_csv("report/%s_%s.tab" % (signature, self.parameters.parameters_string), sep = "\t", na_rep = "nan")
             else:
                 pandas.DataFrame([self.signature_map[signature], self.score_map[signature]],
-                                 index = ['Signature','Score']).transpose().to_csv('report/%s_%s.tab' % (signature, self.parameters.parameters_string), sep = '\t', na_rep = 'nan')
+                                 index = ["Signature","Score"]).transpose().to_csv("report/%s_%s.tab" % (signature, self.parameters.parameters_string), sep = "\t", na_rep = "nan")
             
             ## output significance plots
             if self.null_map[signature] is not None:
@@ -1070,58 +1070,57 @@ class generateOutput(Target):
                 for index in range(4):
                     xmin = max(0, min([real_statistics[index]] + list(self.null_map[signature][index])) - 50)
                     xmax = max([real_statistics[index]] + list(self.null_map[signature][index])) + 50
-                    (n, bins, patches) = plt.hist(list(self.null_map[signature][index]), bins = 20, range = (xmin, xmax), histtype = 'stepfilled')
-                    plt.axvline(x = real_statistics[index], linestyle = '--', linewidth = 2, color = 'r')
-                    plt.savefig('report/%s_%s_%s.png' % (signature, self.parameters.parameters_string, index))
+                    (n, bins, patches) = plt.hist(list(self.null_map[signature][index]), bins = 20, range = (xmin, xmax), histtype = "stepfilled")
+                    plt.axvline(x = real_statistics[index], linestyle = "--", linewidth = 2, color = "r")
+                    plt.savefig("report/%s_%s_%s.png" % (signature, self.parameters.parameters_string, index))
                     plt.clf()
 
 def main():
     ## check for fresh run
-    if os.path.exists('.jobTree'):
-        logger('WARNING: .jobTree directory found, remove it first to start a fresh run\n')
+    if os.path.exists(".jobTree"):
+        logging.warning("WARNING: '.jobTree' directory found, remove it first to start a fresh run\n")
     
     ## parse arguments
-    parser = OptionParser(usage = '%prog [options]')
+    parser = OptionParser(usage = "%prog [options] signature_file pathway_file")
     Stack.addJobTreeOptions(parser)
-    parser.add_option('--jobFile', help='Add as child of jobFile rather than new jobTree')
-    parser.add_option('-s', '--signature', dest='signature_file', default=None)
-    parser.add_option('-n', '--null', dest='null_file', default=None)
-    parser.add_option('-b', '--bootstrap', dest='bootstrap_file', default=None)
-    parser.add_option('-p', '--pathway', dest='pathway_file', default=None)
-    parser.add_option('-o', '--output', dest='output_file', default=None)
-    parser.add_option('-f', '--filter', dest='filter_parameters', default='0.0;0.0')
-    parser.add_option('-t', '--heat', dest='heat_diffusion', default='0')
-    parser.add_option('-u', '--hub', dest="hub_filter", action='store_true', default=False)
-    parser.add_option('-g', '--galaxy', dest='galaxy_run', action='store_true', default=False)
+    parser.add_option("--jobFile",
+                      help = "Add as child of jobFile rather than new jobTree")
+    parser.add_option("-n", "--null", dest = "null_file", default = None,
+                      help = "")
+    parser.add_option("-b", "--bootstrap", dest = "bootstrap_file", default = None,
+                      help = "")
+    parser.add_option("-f", "--filter", dest = "filter_parameters", default = "0.0;0.0",
+                      help = "")
+    parser.add_option("-t", "--heat", dest = "heat_diffusion", default = "0",
+                      help = "")
+    parser.add_option("-u", "--hub", dest = "hub_filter", action = "store_true", default = False,
+                      help = "")
     options, args = parser.parse_args()
-    logger('Using Batch System : %s\n' % (options.batchSystem))
+    logging.info("options: %s" % (str(options)))
+    print "Using Batch System '%s'" % (options.batchSystem)
     
-    if len(args) == 1:
-        if args[0] == 'clean':
-            command = 'rm -rf .jobTree LAYOUT'
-            logger(command)
-            os.system(command)
-            sys.exit(0)
-    
-    assert(len(args) == 0)
+    if len(args) != 2:
+        logging.error("ERROR: incorrect number of arguments\n")
+        sys.exit(1)
+    signature_file = os.path.abspath(args[0])
+    pathway_file = os.path.abspath(args[1])
     
     ## set pathway
-    global_pathway = Pathway(options.pathway_file)
+    global_pathway = Pathway(pathway_file)
     
     ## set parameters
-    parameters = Parameters(options.pathway_file,
+    parameters = Parameters(pathway_file,
                             options.filter_parameters,
                             options.heat_diffusion,
                             options.hub_filter)
     
     ## run
-    s = Stack(branchPATHMARK(options.signature_file,
+    s = Stack(branchPATHMARK(signature_file,
                              options.null_file,
                              options.bootstrap_file,
                              global_pathway,
-                             options.output_file,
                              parameters,
-                             os.getcwd().rstrip('/')))
+                             os.getcwd().rstrip("/")))
     if options.jobFile:
         s.addToJobFile(options.jobFile)
     else:
@@ -1130,11 +1129,14 @@ def main():
         
         failed = s.startJobTree(options)
         if failed:
-            logger('%d jobs failed\n' % failed)
+            logging.warning("WARNING: %d jobs failed" % (failed))
         else:
-            os.system('rm -rf .lastjobTree')
-            os.system('mv .jobTree .lastjobTree')
+            logging.info("Run complete!")
+            if os.path.exists(".lastTree"):
+                os.system("rm -rf .lastTree")
+            if os.path.exists(".jobTree"):
+                os.system("mv .jobTree .lastTree")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from PATHMARK import *
     main()

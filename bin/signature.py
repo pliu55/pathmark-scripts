@@ -3,7 +3,7 @@
 signature.py
     by Sam Ng
 """
-import math, os, random, re, shutil, sys, types
+import logging, math, os, random, re, shutil, sys, types
 from copy import deepcopy
 
 import pandas
@@ -16,21 +16,24 @@ from optparse import OptionParser
 from jobTree.scriptTree.target import Target
 from jobTree.scriptTree.stack import Stack
 
-## default variables
-null_prefixes = ['na_', 'nw_']          ## valid null samples must start with one of these
-                                        ## prefixes and end in a sample name
-
 #### NOTE BLOCK
 #### - Convert LIMMA code to rpy2
 #### - Add in permute and paradigm null_method
 #### - Add method for dealing with either median or mean dichotomies of continuous data
+
+## logger
+logging.basicConfig(filename="signature.log", level=logging.INFO)
+
+## default variables
+null_prefixes = ["na_", "nw_"]          ## valid null samples must start with one of these
+                                        ## prefixes and end in a sample name
 
 ## pm classes
 class Parameters:
     """
     Stores parameters used for this [signature.py specific]
     """
-    def __init__(self, random_seed = 0, bootstrap_size = 10, bootstrap_proportion = 0.85, bootstrap_replacement = False, null_method = 'labels', null_size = 0, signature_method = 'sam'):
+    def __init__(self, random_seed = 0, bootstrap_size = 10, bootstrap_proportion = 0.85, bootstrap_replacement = False, null_method = "labels", null_size = 0, signature_method = "sam"):
         self.random_seed = random_seed
         self.bootstrap_size = bootstrap_size
         self.bootstrap_proportion = bootstrap_proportion
@@ -38,11 +41,11 @@ class Parameters:
         self.null_method = null_method
         self.null_size = null_size
         self.signature_method = signature_method
-        self.signature_file = 'signature.tab'
+        self.signature_file = "signature.tab"
 
 class rpy2SignatureGenes:
     def __init__(self):
-        self.siggenes = importr('siggenes')
+        self.siggenes = importr("siggenes")
     def calculate(self, method, data_frame, positive_samples, negative_samples):
         ## construct matrix_r
         r = robjects.r
@@ -66,14 +69,14 @@ class rpy2SignatureGenes:
         ## generate signature with method
         sam_out = self.siggenes.sam(matrix_r, r.c(cls_r))
         sam_att = r.cbind(
-            r.c(r.attributes(sam_out).rx2('d')),
-            r.c(r.attributes(sam_out).rx2('vec.false')),
-            r.c(r.attributes(sam_out).rx2('q.value')),
-            r.c(r.attributes(sam_out).rx2('p.value')),
-            r.c(r.attributes(sam_out).rx2('s'))
+            r.c(r.attributes(sam_out).rx2("d")),
+            r.c(r.attributes(sam_out).rx2("vec.false")),
+            r.c(r.attributes(sam_out).rx2("q.value")),
+            r.c(r.attributes(sam_out).rx2("p.value")),
+            r.c(r.attributes(sam_out).rx2("s"))
         )
         ## return results as a data_frame
-        ocols = ['Score', 'FalseCalls', 'Q-value', 'P-value', 'StdDev']
+        ocols = ["Score", "FalseCalls", "Q-value", "P-value", "StdDev"]
         output = {}
         for j, col in enumerate(ocols):
             row = {}
@@ -91,12 +94,12 @@ class scipySignatureGenes:
         t_map = {}
         for feature, values in data_frame.iterrows():
             t_map[feature] = stats.ttest_ind(values[positive_samples], values[negative_samples], equal_var = False)[0]
-        return(pandas.DataFrame(pandas.Series(t_map, name = 'T-statistic')))
+        return(pandas.DataFrame(pandas.Series(t_map, name = "T-statistic")))
 
 class rpy2LIMMA:
     def __init__(self):
-        self.edger = importr('edgeR')
-        self.limma = importr('limma')
+        self.edger = importr("edgeR")
+        self.limma = importr("limma")
     def calculate(self, data_frame, positive_samples, negative_samples, output_file):
         ## construct matrix_r
         # r = robjects.r
@@ -109,8 +112,8 @@ class rpy2LIMMA:
         features.sort()
         matrix = data_frame[samples].loc[features]
         # matrix_r = common.convert_to_r_matrix(matrix)
-        matrix_file = '%s.input' % (output_file)
-        matrix.to_csv(matrix_file, sep = '\t', index_label = 'id')
+        matrix_file = "%s.input" % (output_file)
+        matrix.to_csv(matrix_file, sep = "\t", index_label = "id")
         
         ## construct cls_r
         # cls = []
@@ -120,14 +123,14 @@ class rpy2LIMMA:
         #     elif sample in negative_samples:
         #         cls.append(0)
         # cls_r = robjects.IntVector(cls)
-        cls_file = '%s.contrast' % (output_file)
-        o = open(cls_file, 'w')
-        o.write('sample\tcluster\n')
+        cls_file = "%s.contrast" % (output_file)
+        o = open(cls_file, "w")
+        o.write("sample\tcluster\n")
         for sample in samples:
             if sample in positive_samples:
-                o.write('%s\t+\n' % (sample))
+                o.write("%s\t+\n" % (sample))
             elif sample in negative_samples:
-                o.write('%s\t-\n' % (sample))
+                o.write("%s\t-\n" % (sample))
         o.close()
         
         ## generate signature with limma
@@ -144,15 +147,15 @@ class rpy2LIMMA:
         # limma_out = sol = list(design=design, y=y, fit=fit, tt=tt)
         
         # sam_att = r.cbind(
-        #     r.c(r.attributes(sam_out).rx2('d')),
-        #     r.c(r.attributes(sam_out).rx2('vec.false')),
-        #     r.c(r.attributes(sam_out).rx2('q.value')),
-        #     r.c(r.attributes(sam_out).rx2('p.value')),
-        #     r.c(r.attributes(sam_out).rx2('s'))
+        #     r.c(r.attributes(sam_out).rx2("d")),
+        #     r.c(r.attributes(sam_out).rx2("vec.false")),
+        #     r.c(r.attributes(sam_out).rx2("q.value")),
+        #     r.c(r.attributes(sam_out).rx2("p.value")),
+        #     r.c(r.attributes(sam_out).rx2("s"))
         # )
         
         ## return results as a data_frame
-        # ocols = ['Score', 'FalseCalls', 'Q-value', 'P-value', 'StdDev']
+        # ocols = ["Score", "FalseCalls", "Q-value", "P-value", "StdDev"]
         # output = {}
         # for j, col in enumerate(ocols):
         #     row = {}
@@ -162,35 +165,22 @@ class rpy2LIMMA:
         #     # print row
         #     output[col] = row
         # return(pandas.DataFrame(output))
-        output_name = output_file.split('/')[-1]
-        result_file = '%s.result' % (output_file)
-        top_file = '%s.top_100.tab' % (output_name)
-        plot_file = '%s.plot.pdf' % (output_name)
-        cmd = 'Rscript limma_ng.R %s %s 100 %s %s %s' % (matrix_file, cls_file, result_file, top_file, plot_file)
+        output_name = output_file.split("/")[-1]
+        result_file = "%s.result" % (output_file)
+        top_file = "%s.top_100.tab" % (output_name)
+        plot_file = "%s.plot.pdf" % (output_name)
+        cmd = "Rscript limma_ng.R %s %s 100 %s %s %s" % (matrix_file, cls_file, result_file, top_file, plot_file)
         os.system(cmd)
-        result_frame = pandas.read_csv(result_file, sep = '\t', index_col = 0)
+        result_frame = pandas.read_csv(result_file, sep = "\t", index_col = 0)
         os.remove(matrix_file)
         os.remove(cls_file)
         os.remove(result_file)
-        if output_name.startswith('_n') or output_name.startswith('_b'):
+        if output_name.startswith("_n") or output_name.startswith("_b"):
             os.remove(top_file)
             os.remove(plot_file)
         return(pandas.DataFrame(result_frame.icol(1)))
         
-## pm functions
-def logger(message, file = None, die = False):
-    """
-    Writes messages to standard error [2014-3-1]
-    """
-    if file is None:
-        sys.stderr.write(message)
-    else:
-        o = open(file, 'a')
-        o.write(message)
-        o.close()
-    if die:
-        sys.exit(1)
-
+## signature functions
 def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse_sort = False):
     """
     Generates dichotomies for a given column in the phenotype file [signature.py specific]
@@ -210,7 +200,7 @@ def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse_sort =
         for index in range(len(phenotype_categories)):
             if index == 1 and len(phenotype_categories) == 2:
                 break
-            signature_name = '%s=%s_SIGNATURE' % (phenotype, phenotype_categories[index])
+            signature_name = "%s=%s_SIGNATURE" % (phenotype, phenotype_categories[index])
             positive_samples = list(set(phenotype_map[phenotype_map == phenotype_categories[index]].index) & set(data_samples))
             negative_samples = list(set(phenotype_map[phenotype_map != phenotype_categories[index]].index) & set(data_samples))
             yield(signature_name, positive_samples, negative_samples)
@@ -227,18 +217,18 @@ class branchSignatures(Target):
         self.directory = directory
     def run(self):
         os.chdir(self.directory)
-        if not os.path.exists('analysis'):
-            os.mkdir('analysis')
-        assert(not os.path.exists('analysis/signature_files'))
-        os.mkdir('analysis/signature_files')
+        if not os.path.exists("analysis"):
+            os.mkdir("analysis")
+        assert(not os.path.exists("analysis/signature_files"))
+        os.mkdir("analysis/signature_files")
         
         ## read in data and phenotype matrices
-        data_frame = pandas.read_csv(self.data_file, sep = '\t', index_col = 0)
+        data_frame = pandas.read_csv(self.data_file, sep = "\t", index_col = 0)
         data_samples = list(data_frame.columns)
-        phenotype_frame = pandas.read_csv(self.phenotype_file, sep = '\t', index_col = 0)
+        phenotype_frame = pandas.read_csv(self.phenotype_file, sep = "\t", index_col = 0)
         phenotypes = list(phenotype_frame.columns)
         for phenotype in phenotypes:
-            assert(not phenotype.startswith('_'))
+            assert(not phenotype.startswith("_"))
             for signature_name, positive_samples, negative_samples in generateDichotomies(phenotype, phenotype_frame, data_samples):
                 self.addChildTarget(generateBatches(data_frame,
                                                     signature_name,
@@ -263,7 +253,7 @@ class generateBatches(Target):
         random.seed(self.parameters.random_seed+12321)
         
         ## queue real
-        self.addChildTarget(computeSignatures('analysis/signature_files/%s' % (self.signature_name),
+        self.addChildTarget(computeSignatures("analysis/signature_files/%s" % (self.signature_name),
                                               self.data_frame,
                                               self.signature_name,
                                               self.positive_samples,
@@ -277,10 +267,10 @@ class generateBatches(Target):
         for bootstrap_index in range(self.parameters.bootstrap_size):
             bootstrap_positive_data_frame = self.data_frame[random.sample(self.positive_samples, bootstrap_positive_count)].copy()
             bootstrap_negative_data_frame = self.data_frame[random.sample(self.negative_samples, bootstrap_negative_count)].copy()
-            bootstrap_data_frame = bootstrap_positive_data_frame.join(bootstrap_negative_data_frame, how = 'outer')
-            self.addChildTarget(computeSignatures('analysis/signature_files/_b%s_%s' % (bootstrap_index + 1, self.signature_name),
+            bootstrap_data_frame = bootstrap_positive_data_frame.join(bootstrap_negative_data_frame, how = "outer")
+            self.addChildTarget(computeSignatures("analysis/signature_files/_b%s_%s" % (bootstrap_index + 1, self.signature_name),
                                                   bootstrap_data_frame,
-                                                  '%s:%s' % (self.signature_name, bootstrap_index + 1),
+                                                  "%s:%s" % (self.signature_name, bootstrap_index + 1),
                                                   self.positive_samples,
                                                   self.negative_samples,
                                                   self.parameters,
@@ -288,12 +278,12 @@ class generateBatches(Target):
         
         ## generate and queue nulls
         for null_index in range(self.parameters.null_size):
-            if self.parameters.null_method == 'labels':
+            if self.parameters.null_method == "labels":
                 null_data_frame = self.data_frame.copy()
                 null_data_frame.columns = random.sample(self.data_frame.columns, len(self.data_frame.columns))
-            self.addChildTarget(computeSignatures('analysis/signature_files/_n%s_%s' % (null_index + 1, self.signature_name),
+            self.addChildTarget(computeSignatures("analysis/signature_files/_n%s_%s" % (null_index + 1, self.signature_name),
                                                   null_data_frame,
-                                                  '%s:%s' % (self.signature_name, null_index + 1),
+                                                  "%s:%s" % (self.signature_name, null_index + 1),
                                                   self.positive_samples,
                                                   self.negative_samples,
                                                   self.parameters,
@@ -312,21 +302,21 @@ class computeSignatures(Target):
     def run(self):
         os.chdir(self.directory)
         
-        if self.parameters.signature_method == 'sam':
+        if self.parameters.signature_method == "sam":
             siggenes = rpy2SignatureGenes()
-            signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)[['Score']]
+            signature_frame = siggenes.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)[["Score"]]
             signature_frame.columns = [self.signature_name]
-            signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
-        elif self.parameters.signature_method == 'ttest':
+            signature_frame.to_csv(self.output_file, sep = "\t", index_label = "id")
+        elif self.parameters.signature_method == "ttest":
             scipy = scipySignatureGenes()
             signature_frame = scipy.calculate(self.parameters.signature_method, self.data_frame, self.positive_samples, self.negative_samples)
             signature_frame.columns = [self.signature_name]
-            signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
-        elif self.parameters.signature_method == 'limma':
+            signature_frame.to_csv(self.output_file, sep = "\t", index_label = "id")
+        elif self.parameters.signature_method == "limma":
             limma = rpy2LIMMA()
             signature_frame = limma.calculate(self.data_frame, self.positive_samples, self.negative_samples, self.output_file)
             signature_frame.columns = [self.signature_name]
-            signature_frame.to_csv(self.output_file, sep = '\t', index_label = 'id')
+            signature_frame.to_csv(self.output_file, sep = "\t", index_label = "id")
 
 class mergeAllSignatures(Target):
     def __init__(self, parameters, directory):
@@ -337,59 +327,59 @@ class mergeAllSignatures(Target):
         os.chdir(self.directory)
         
         ## identify files
-        all_files = os.listdir('analysis/signature_files')
-        bootstrap_files = filter(lambda x: x.startswith('_b'), all_files)
-        null_files = filter(lambda x: x.startswith('_n'), all_files)
+        all_files = os.listdir("analysis/signature_files")
+        bootstrap_files = filter(lambda x: x.startswith("_b"), all_files)
+        null_files = filter(lambda x: x.startswith("_n"), all_files)
         real_files = list(set(all_files) - set(bootstrap_files) - set(null_files))
 
         ## merge data
         real_signature_frame = pandas.DataFrame()
         for file in real_files:
-            join_frame = pandas.read_csv('analysis/signature_files/%s' % (file), index_col = 0 , sep = '\t')
-            real_signature_frame = real_signature_frame.join(join_frame, how = 'outer')
+            join_frame = pandas.read_csv("analysis/signature_files/%s" % (file), index_col = 0 , sep = "\t")
+            real_signature_frame = real_signature_frame.join(join_frame, how = "outer")
         if len(real_files) > 0:
-            real_signature_frame.to_csv(self.parameters.signature_file, sep = '\t', index_label = 'id')
+            real_signature_frame.to_csv(self.parameters.signature_file, sep = "\t", index_label = "id")
         bootstrap_signature_frame = pandas.DataFrame()
         for file in bootstrap_files:
-            join_frame = pandas.read_csv('analysis/signature_files/%s' % (file), index_col = 0 , sep = '\t')
-            bootstrap_signature_frame = bootstrap_signature_frame.join(join_frame, how = 'outer')
+            join_frame = pandas.read_csv("analysis/signature_files/%s" % (file), index_col = 0 , sep = "\t")
+            bootstrap_signature_frame = bootstrap_signature_frame.join(join_frame, how = "outer")
         if len(bootstrap_files) > 0:
-            bootstrap_signature_frame.to_csv('bootstrap_%s' % (self.parameters.signature_file), sep = '\t', index_label = 'id')
+            bootstrap_signature_frame.to_csv("bootstrap_%s" % (self.parameters.signature_file), sep = "\t", index_label = "id")
         null_signature_frame = pandas.DataFrame()
         for file in null_files:
-            join_frame = pandas.read_csv('analysis/signature_files/%s' % (file), index_col = 0 , sep = '\t')
-            null_signature_frame = null_signature_frame.join(join_frame, how = 'outer')
+            join_frame = pandas.read_csv("analysis/signature_files/%s" % (file), index_col = 0 , sep = "\t")
+            null_signature_frame = null_signature_frame.join(join_frame, how = "outer")
         if len(null_files) > 0:
-            null_signature_frame.to_csv('null_%s' % (self.parameters.signature_file), sep = '\t', index_label = 'id')
+            null_signature_frame.to_csv("null_%s" % (self.parameters.signature_file), sep = "\t", index_label = "id")
         
         ## remove signature_files
-        # shutil.rmtree('analysis/signature_files')
+        # shutil.rmtree("analysis/signature_files")
         
 def main():
     ## check for fresh run
-    if os.path.exists('.jobTree'):
-        logger('WARNING: .jobTree directory found, remove it first to start a fresh run\n')
+    if os.path.exists(".jobTree"):
+        logging.warning("WARNING: '.jobTree' directory found, remove it first to start a fresh run\n")
     
     ## parse arguments
-    parser = OptionParser(usage = '%prog [options]')
+    parser = OptionParser(usage = "%prog [options] data_matrix phenotype_matrix")
     Stack.addJobTreeOptions(parser)
-    parser.add_option('--jobFile', help='Add as child of jobFile rather than new jobTree')
-    parser.add_option('-d', '--data', dest='data_file', default=None)
-    parser.add_option('-p', '--phenotype', dest='phenotype_file', default=None)
-    parser.add_option('-m', '--method', dest='signature_method', default='sam')
-    parser.add_option('-n', '--null', dest='null_size', default=0)
-    parser.add_option('-b', '--bootstrap', dest='bootstrap_size', default=0)
+    parser.add_option("--jobFile",
+                      help = "Add as child of jobFile rather than new jobTree")
+    parser.add_option("-n", "--null", dest = "null_size", default = 0,
+                      help = "")
+    parser.add_option("-b", "--bootstrap", dest = "bootstrap_size", default = 0,
+                      help = "")
+    parser.add_option("-m", "--method", dest = "signature_method", default = "sam",
+                      help = "")
     options, args = parser.parse_args()
-    logger('Using Batch System : %s\n' % (options.batchSystem))
+    logging.info("options: %s" % (str(options)))
+    print "Using Batch System '%s'" % (options.batchSystem)
     
-    if len(args) == 1:
-        if args[0] == 'clean':
-            command = 'rm -rf .jobTree analysis'
-            logger(command)
-            os.system(command)
-            sys.exit(0)
-    
-    assert(len(args) == 0)
+    if len(args) != 2:
+        logging.error("ERROR: incorrect number of arguments\n")
+        sys.exit(1)
+    data_file = os.path.abspath(args[0])
+    phenotype_file = os.path.abspath(args[1])
     
     ## set parameters
     parameters = Parameters(signature_method = options.signature_method,
@@ -397,10 +387,10 @@ def main():
                             bootstrap_size = int(options.bootstrap_size))
     
     ## run
-    s = Stack(branchSignatures(options.data_file,
-                               options.phenotype_file,
+    s = Stack(branchSignatures(data_file,
+                               phenotype_file,
                                parameters,
-                               os.getcwd().rstrip('/')))
+                               os.getcwd().rstrip("/")))
     if options.jobFile:
         s.addToJobFile(options.jobFile)
     else:
@@ -409,11 +399,14 @@ def main():
         
         failed = s.startJobTree(options)
         if failed:
-            logger('%d jobs failed\n' % failed)
+            logging.warning("WARNING: %d jobs failed" % (failed))
         else:
-            os.system('rm -rf .lastjobTree')
-            os.system('mv .jobTree .lastjobTree')
+            logging.info("Run complete!")
+            if os.path.exists(".lastTree"):
+                os.system("rm -rf .lastTree")
+            if os.path.exists(".jobTree"):
+                os.system("mv .jobTree .lastTree")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from signature import *
     main()
