@@ -52,8 +52,6 @@ def main():
         cmd += " -n %s" % ("null_signature.tab")
     if os.path.exists("bootstrap_signature.tab"):
         cmd += " -b %s" % ("bootstrap_signature.tab")
-    if options.output_file is not None:
-        cmd += " -o %s" % (options.output_file)
     cmd += " -f \"%s\"" % (options.filter_parameters)
     cmd += " -t %s" % (options.heat_diffusion)
     if options.hub_filter:
@@ -67,7 +65,6 @@ def main():
         zipDirectory("report", zip_file)
         zip_file.close()
         shutil.copy(os.path.join(work_dir, "report.zip"), options.output_file)
-
 
 if __name__ == "__main__":
     main()

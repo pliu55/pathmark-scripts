@@ -19,7 +19,7 @@ $pathway
     <param name="hubfilter" type="boolean" label="Keep hubs with a majority of active downsteam genes"/>
   </inputs>
   <outputs>
-      <data name="report" format="zip"/>
+      <data name="report" format="zip" label="Report files"/>
   </outputs>
     <help>
 Wrapper for PathMark.  
