@@ -16,6 +16,12 @@ bin_dir = os.path.dirname(os.path.abspath(__file__))
 signature_exec = os.path.join(bin_dir, "signature.py")
 pathmark_exec = os.path.join(bin_dir, "PATHMARK.py")
 
+## functions
+def zipDirectory(directory, zip):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            zip.write(os.path.join(root, file))
+
 def main():
     ## check for fresh run
     if os.path.exists(".jobTree"):
