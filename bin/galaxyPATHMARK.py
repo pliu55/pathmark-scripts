@@ -49,11 +49,11 @@ def main():
     pathway_file = os.path.abspath(args[2])
     
     ## run signature.py
-    cmd = "%s %s %s" % (signature_exec, data_file, phenotype_file)
+    cmd = "%s %s %s %s" % (sys.executable, signature_exec, data_file, phenotype_file)
     os.system(cmd)
     
     ## run PATHMARK.py
-    cmd = "%s" % (pathmark_exec)
+    cmd = "%s %s" % (sys.executable, pathmark_exec)
     if os.path.exists("null_signature.tab"):
         cmd += " -n %s" % ("null_signature.tab")
     if os.path.exists("bootstrap_signature.tab"):
