@@ -22,13 +22,13 @@ init.csh : bin/circlePlot.py
 	echo endif >> init.csh
 
 bin/circlePlot.py : paradigm-scripts
-	ln -s paradigm-scripts/bin/circlePlot.py bin/circlePlot.py
+	ln -s $$PWD/paradigm-scripts/bin/circlePlot.py bin/circlePlot.py
 
 paradigm-scripts :
 	if [ ! -d '../paradigm-scripts' ]; then \
 		cd ..; git clone ${PARADIGM_GIT}; cd paradigm-scripts; make; \
 	fi
-	ln -s ../paradigm-scripts paradigm-scripts
+	ln -s $$PWD/../paradigm-scripts paradigm-scripts
 
 clean :
 	rm -f init.sh init.csh bin/circlePlot.py paradigm-scripts
