@@ -9,7 +9,7 @@ from copy import deepcopy
 from optparse import OptionParser
 
 ## logger
-logging.basicConfig(filename="galaxy-pathmark.log", level=logging.INFO)
+logging.basicConfig(filename = "galaxy-pathmark.log", level = logging.INFO)
 
 ## executables
 bin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +29,14 @@ def main():
     
     ## parse arguments
     parser = OptionParser(usage = "%prog [options] data_matrix phenotype_matrix pathway_file")
+    parser.add_option("-b", "--bootstrap", dest = "bootstrap_size", default = 0,
+                      help = "")
+    parser.add_option("-n", "--null", dest = "null_size", default = 0,
+                      help = "")
+    parser.add_option("-p", "--permute", dest = "null_permute", default = "paradigm",
+                      help = "")
+    parser.add_option("-m", "--method", dest = "signature_method", default = "sam",
+                      help = "")
     parser.add_option("-f", "--filter", dest = "filter_parameters", default = "0.0;0.0",
                       help = "")
     parser.add_option("-t", "--heat", dest = "heat_diffusion", default = "0",
@@ -36,6 +44,8 @@ def main():
     parser.add_option("-u", "--hub", dest = "hub_filter", action = "store_true", default = False,
                       help = "")
     parser.add_option("-o", "--output", dest = "output_file", default = None,
+                      help = "")
+    parser.add_option("-z", "--seed", dest = "seed", default = None,
                       help = "")
     options, args = parser.parse_args()
     
@@ -49,7 +59,14 @@ def main():
     pathway_file = os.path.abspath(args[2])
     
     ## run signature.py
-    cmd = "%s %s %s %s" % (sys.executable, signature_exec, data_file, phenotype_file)
+    cmd = "%s %s" % (sys.executable, signature_exec)
+    cmd += " -b %s" % (options.bootstrap_size)
+    cmd += " -n %s" % (options.null_size)
+    cmd += " -p %s" % (options.null_permute)
+    cmd += " -m %s" % (options.signature_method)
+    cmd += " %s %s" % (data_file, phenotype_file)
+    if options.seed is not None:
+        cmd += " -z %s" % (options.seed)
     os.system(cmd)
     
     ## run PATHMARK.py

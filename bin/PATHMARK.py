@@ -3,7 +3,7 @@
 PATHMARK.py
     by Sam Ng
 """
-import logging, math, os, random, re, sys, types
+import logging, math, os, re, sys, types
 from copy import deepcopy
 
 import pandas
@@ -19,7 +19,7 @@ from jobTree.scriptTree.stack import Stack
 #### - Add in option to collapse the input pathway
 
 ## logger
-logging.basicConfig(filename="signature.log", level=logging.INFO)
+logging.basicConfig(filename = "pathmark.log", level = logging.INFO)
 
 ## pm classes
 class Parameters:
@@ -588,7 +588,7 @@ def filterGeneGroups(pathmark_graph, global_graph, include_threshold = 0.5):
         if pathmark_graph.node[node]["type"] in ["complex", "family"]:
             group_nodes.append(node)
     remove_nodes = [""]
-    while(len(remove_nodes) > 0):
+    while len(remove_nodes) > 0:
         remove_nodes = []
         for node in group_nodes:
             top_size = getGroupSize(node, reversed_filtered_graph)
@@ -603,68 +603,75 @@ def filterGeneGroups(pathmark_graph, global_graph, include_threshold = 0.5):
             reversed_filtered_graph.remove_node(node)
     return(filtered_graph)
 
-def filterGoodHub(pathmark_graph, global_graph, score_map, nodeThreshold, childrenTypes = ["protein"], childrenThreshold = 3, include_threshold = 0.5):
+def filterGoodHub(pathmark_graph, global_graph, score_map, node_threshold, children_types = ["protein"], children_threshold = 3, include_threshold = 0.66):
     """
     Applies a filter to include hubs with greater than the threshold number of members [PATHMARK.py specific]
     Dependencies: reverseNetworkX
     """
-    outputGraph = deepcopy(subnetGraph)
-    rglobalGraph = reverseGraph(globalGraph)
+    l = open('filter_hub.log', 'w')
+    
+    filtered_graph = deepcopy(pathmark_graph)
+    reversed_global_graph = reverseNetworkX(global_graph)
     
     ## identify all hubs
-    badHubs  = set()
-    goodHubs = set()
-    childrenMap = {}
-    for node in subnetGraph.node:
-        childrenMap[node] = set()
-        for child in globalGraph.edge[node]:
-            if globalGraph.node[child]["type"] in childrenTypes:
-                childrenMap[node].update([child])
-        if node not in outputGraph.node:
-            if len(childrenMap[node]) >= childrenThreshold:
-                badHubs.update([node])
+    hub_bad = set()
+    hub_good = set()
+    children_map = {}
+    for node in global_graph.node:
+        children_map[node] = set()
+        for child in global_graph.edge[node]:
+            if global_graph.node[child]["type"] in children_types:
+                children_map[node].update([child])
+        if node not in filtered_graph.node:
+            if len(children_map[node]) >= children_threshold:
+                hub_bad.update([node])
     
     ## iteratively add good hubs
-    hubScore = {}
-    currentCount = 1
-    currentNodes = []
-    while (currentCount > 0):
-        currentCount = 0
-        currentNodes = []
-        currentHubs = deepcopy(badHubs)
+    hub_score = {}
+    current_count = 1
+    current_nodes = []
+    while current_count > 0:
+        current_count = 0
+        current_nodes = []
+        current_hubs = deepcopy(hub_bad)
         ## identify hubs to add
-        for hub in currentHubs:
-            goodChildren = set()
-            for child in childrenMap[hub]:
-                if child in nodeScore:
-                    if nodeScore[child] >= nodeThreshold:
-                        goodChildren.update([child])
-                if child in goodHubs:
-                    goodChildren.update([child])
-            if float(len(goodChildren))/float(len(childrenMap[hub])) >= includeThreshold:
-                log("> %s\n" % (hub))
-                goodHubs.update([hub])
-                badHubs.remove(hub)
-                currentCount += 1
-                currentNodes.append(hub)
-                for child in goodChildren:
-                    if child not in outputGraph.node:
-                        currentNodes.append(child)
+        for hub in current_hubs:
+            children_good = set()
+            for child in children_map[hub]:
+                if child in score_map:
+                    if score_map[child] >= node_threshold:
+                        children_good.update([child])
+                if child in hub_good:
+                    children_good.update([child])
+            if float(len(children_good))/float(len(children_map[hub])) >= include_threshold:
+                l.write("> %s\t%s\t%s\n" % (hub, len(children_good), len(children_map[hub])))
+                hub_good.update([hub])
+                hub_bad.remove(hub)
+                current_count += 1
+                current_nodes.append(hub)
+                for child in children_good:
+                    if child in score_map:
+                        l.write("  %s\t%s\n" % (child, score_map[child]))
+                    else:
+                        l.write("  %s\t-\n" % (child))
+                    if child not in filtered_graph.node:
+                        current_nodes.append(child)
         ## connect new good hubs
-        while len(currentNodes) > 0:
-            node = currentNodes.pop(0)
-            outputGraph.add_node(node, type = globalGraph.node[node]["type"])
-            for target in globalGraph.edge[node]:
-                if target in outputGraph.node:
-                    for edge in globalGraph.edge[node][target]:
-                        outputGraph.add_edge(node, target, interaction =
-                                    globalGraph.edge[node][target][edge]["interaction"])
-            for source in rglobalGraph.edge[node]:
-                if source in outputGraph.node:
-                    for edge in rglobalGraph.edge[node][source]:
-                        outputGraph.add_edge(source, node, interaction =
-                                    rglobalGraph.edge[node][source][edge]["interaction"])
-    return(outputGraph)
+        while len(current_nodes) > 0:
+            node = current_nodes.pop(0)
+            filtered_graph.add_node(node, type = global_graph.node[node]["type"])
+            for target in global_graph.edge[node]:
+                if target in filtered_graph.node:
+                    for edge in global_graph.edge[node][target]:
+                        filtered_graph.add_edge(node, target, interaction =
+                                                global_graph.edge[node][target][edge]["interaction"])
+            for source in reversed_global_graph.edge[node]:
+                if source in filtered_graph.node:
+                    for edge in reversed_global_graph.edge[node][source]:
+                        filtered_graph.add_edge(source, node, interaction =
+                                                reversed_global_graph.edge[node][source][edge]["interaction"])
+    l.close()
+    return(filtered_graph)
 
 def getLargestSubgraph(pathmark_graph):
     subgraphs = networkx.weakly_connected_component_subgraphs(pathmark_graph)
@@ -884,8 +891,9 @@ class branchPATHMARK(Target):
                                           self.parameters,
                                           forced_statistics = score_statistics)
             signature_graph = filterGeneGroups(signature_graph, global_graph)
-            # if self.parameters.hub_filter:
-            #      signature_graph = filterGoodHub(signature_graph, global_graph)
+            if self.parameters.hub_filter:
+                node_threshold = score_statistics[0] + self.parameters.filter_parameters[0]*score_statistics[1]
+                signature_graph = filterGoodHub(signature_graph, global_graph, score_frame.icol(0), node_threshold)
             writeNetworkXSIF("%s/%s" % (signature_directory, signature_sif), signature_graph)
             signature_map[signature] = deepcopy(signature_frame.icol(0))
             score_map[signature] = deepcopy(score_frame.icol(0))
@@ -940,8 +948,9 @@ class queuePATHMARK(Target):
                                       self.parameters,
                                       forced_statistics = self.forced_statistics)
         signature_graph = filterGeneGroups(signature_graph, self.global_graph)
-        # if self.parameters.hub_filter:
-        #      signature_graph = filterGoodHub(signature_graph, self.global_graph)
+        if self.parameters.hub_filter:
+            node_threshold = score_statistics[0] + self.parameters.filter_parameters[0]*score_statistics[1]
+            signature_graph = filterGoodHub(signature_graph, self.global_graph, score_frame.icol(0), node_threshold)
         writeNetworkXSIF(self.output_sif, signature_graph)
 
 class analyzeGraphStatistics(Target):
@@ -1085,9 +1094,9 @@ def main():
     Stack.addJobTreeOptions(parser)
     parser.add_option("--jobFile",
                       help = "Add as child of jobFile rather than new jobTree")
-    parser.add_option("-n", "--null", dest = "null_file", default = None,
-                      help = "")
     parser.add_option("-b", "--bootstrap", dest = "bootstrap_file", default = None,
+                      help = "")
+    parser.add_option("-n", "--null", dest = "null_file", default = None,
                       help = "")
     parser.add_option("-f", "--filter", dest = "filter_parameters", default = "0.0;0.0",
                       help = "")

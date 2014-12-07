@@ -18,11 +18,10 @@ from jobTree.scriptTree.stack import Stack
 
 #### NOTE BLOCK
 #### - Convert LIMMA code to rpy2
-#### - Add in permute and paradigm null_method
 #### - Add method for dealing with either median or mean dichotomies of continuous data
 
 ## logger
-logging.basicConfig(filename="signature.log", level=logging.INFO)
+logging.basicConfig(filename = "signature.log", level = logging.INFO)
 
 ## default variables
 null_prefixes = ["na_", "nw_"]          ## valid null samples must start with one of these
@@ -33,11 +32,17 @@ class Parameters:
     """
     Stores parameters used for this [signature.py specific]
     """
-    def __init__(self, random_seed = 0, bootstrap_size = 10, bootstrap_proportion = 0.85, bootstrap_replacement = False, null_method = "labels", null_size = 0, signature_method = "sam"):
-        self.random_seed = random_seed
+    def __init__(self, random_seed = None, bootstrap_size = 10, null_method = "paradigm", null_size = 0, signature_method = "sam"):
+        if random_seed is None:
+            self.random_seed = random.randint(0, 999999999)
+        else:
+            if os.path.exists(seed_input):
+                f = open(seed_input, 'r')
+                self.random_seed = int(f.readline().rstrip())
+                f.close()
+            else:
+                self.random_seed = int(seed_input)
         self.bootstrap_size = bootstrap_size
-        self.bootstrap_proportion = bootstrap_proportion
-        self.bootstrap_replacement = bootstrap_replacement
         self.null_method = null_method
         self.null_size = null_size
         self.signature_method = signature_method
@@ -250,7 +255,7 @@ class generateBatches(Target):
         self.directory = directory
     def run(self):
         os.chdir(self.directory)
-        random.seed(self.parameters.random_seed+12321)
+        random.seed(self.parameters.random_seed)
         
         ## queue real
         self.addChildTarget(computeSignatures("analysis/signature_files/%s" % (self.signature_name),
@@ -262,11 +267,13 @@ class generateBatches(Target):
                                               self.directory))
         
         ## generate and queue bootstraps
-        bootstrap_positive_count = int(round(self.parameters.bootstrap_proportion*len(self.positive_samples)))
-        bootstrap_negative_count = int(round(self.parameters.bootstrap_proportion*len(self.negative_samples)))
         for bootstrap_index in range(self.parameters.bootstrap_size):
-            bootstrap_positive_data_frame = self.data_frame[random.sample(self.positive_samples, bootstrap_positive_count)].copy()
-            bootstrap_negative_data_frame = self.data_frame[random.sample(self.negative_samples, bootstrap_negative_count)].copy()
+            bootstrap_positive_data_frame = pandas.DataFrame(index = self.data_frame.index)
+            for sample in self.positive_samples:
+                bootstrap_positive_data_frame[sample] = self.data_frame[random.sample(self.positive_samples, 1)[0]]
+            bootstrap_negative_data_frame = pandas.DataFrame(index = self.data_frame.index)
+            for sample in self.negative_samples:
+                bootstrap_negative_data_frame[sample] = self.data_frame[random.sample(self.negative_samples, 1)[0]]
             bootstrap_data_frame = bootstrap_positive_data_frame.join(bootstrap_negative_data_frame, how = "outer")
             self.addChildTarget(computeSignatures("analysis/signature_files/_b%s_%s" % (bootstrap_index + 1, self.signature_name),
                                                   bootstrap_data_frame,
@@ -278,9 +285,18 @@ class generateBatches(Target):
         
         ## generate and queue nulls
         for null_index in range(self.parameters.null_size):
-            if self.parameters.null_method == "labels":
-                null_data_frame = self.data_frame.copy()
-                null_data_frame.columns = random.sample(self.data_frame.columns, len(self.data_frame.columns))
+            if self.parameters.null_method == "samples":
+                null_data_frame = self.data_frame[self.positive_samples + self.negative_samples].copy()
+                null_data_frame.columns = random.sample(null_data_frame.columns, len(null_data_frame.columns))
+            elif self.parameters.null_method == "features":
+                null_data_frame = self.data_frame[self.positive_samples + self.negative_samples].copy()
+                null_data_frame.index = random.sample(null_data_frame.index, len(null_data_frame.index))
+            elif self.parameters.null_method == "paradigm":
+                null_data_frame = pandas.DataFrame(index = self.data_frame.index)
+                for sample in self.positive_samples + self.negative_samples:
+                    null_samples = filter(lambda x: x.endswith(sample), self.data_frame.columns)
+                    null_samples = filter(lambda x: filter(x.startswith, null_prefixes), null_samples)
+                    null_data_frame[sample] = self.data_frame[random.sample(null_samples, 1)[0]]
             self.addChildTarget(computeSignatures("analysis/signature_files/_n%s_%s" % (null_index + 1, self.signature_name),
                                                   null_data_frame,
                                                   "%s:%s" % (self.signature_name, null_index + 1),
@@ -365,11 +381,15 @@ def main():
     Stack.addJobTreeOptions(parser)
     parser.add_option("--jobFile",
                       help = "Add as child of jobFile rather than new jobTree")
-    parser.add_option("-n", "--null", dest = "null_size", default = 0,
-                      help = "")
     parser.add_option("-b", "--bootstrap", dest = "bootstrap_size", default = 0,
                       help = "")
+    parser.add_option("-n", "--null", dest = "null_size", default = 0,
+                      help = "")
+    parser.add_option("-p", "--permute", dest = "null_permute", default = "paradigm",
+                      help = "")
     parser.add_option("-m", "--method", dest = "signature_method", default = "sam",
+                      help = "")
+    parser.add_option("-z", "--seed", dest = "seed", default = None,
                       help = "")
     options, args = parser.parse_args()
     logging.info("options: %s" % (str(options)))
@@ -383,8 +403,11 @@ def main():
     
     ## set parameters
     parameters = Parameters(signature_method = options.signature_method,
+                            bootstrap_size = int(options.bootstrap_size,
                             null_size = int(options.null_size),
-                            bootstrap_size = int(options.bootstrap_size))
+                            null_method = options.null_permute,
+                            bootstrap_size = int(options.bootstrap_size),
+                            random_seed = options.seed)
     
     ## run
     s = Stack(branchSignatures(data_file,
