@@ -36,12 +36,12 @@ class Parameters:
         if random_seed is None:
             self.random_seed = random.randint(0, 999999999)
         else:
-            if os.path.exists(seed_input):
-                f = open(seed_input, 'r')
+            if os.path.exists(random_seed):
+                f = open(random_seed, 'r')
                 self.random_seed = int(f.readline().rstrip())
                 f.close()
             else:
-                self.random_seed = int(seed_input)
+                self.random_seed = int(random_seed)
         self.bootstrap_size = bootstrap_size
         self.null_method = null_method
         self.null_size = null_size
@@ -403,10 +403,9 @@ def main():
     
     ## set parameters
     parameters = Parameters(signature_method = options.signature_method,
-                            bootstrap_size = int(options.bootstrap_size,
+                            bootstrap_size = int(options.bootstrap_size),
                             null_size = int(options.null_size),
                             null_method = options.null_permute,
-                            bootstrap_size = int(options.bootstrap_size),
                             random_seed = options.seed)
     
     ## run

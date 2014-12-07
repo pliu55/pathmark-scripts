@@ -31,7 +31,7 @@ paradigm-scripts :
 	ln -s ../paradigm-scripts paradigm-scripts
 
 clean :
-	rm -f init.sh init.csh bin/circlePlot.py
+	rm -f init.sh init.csh bin/circlePlot.py paradigm-scripts
 	if [ -d 'example' ]; then \
 		cd example; make clean; \
 	fi

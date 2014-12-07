@@ -48,6 +48,7 @@ def main():
     parser.add_option("-z", "--seed", dest = "seed", default = None,
                       help = "")
     options, args = parser.parse_args()
+    logging.info("options: %s" % (str(options)))
     
     work_dir = os.path.abspath("./")
     
@@ -64,10 +65,11 @@ def main():
     cmd += " -n %s" % (options.null_size)
     cmd += " -p %s" % (options.null_permute)
     cmd += " -m %s" % (options.signature_method)
-    cmd += " %s %s" % (data_file, phenotype_file)
     if options.seed is not None:
         cmd += " -z %s" % (options.seed)
+    cmd += " %s %s" % (data_file, phenotype_file)
     os.system(cmd)
+    logging.info("system: %s" % (cmd))
     
     ## run PATHMARK.py
     cmd = "%s %s" % (sys.executable, pathmark_exec)
@@ -81,6 +83,7 @@ def main():
         cmd += " -u"
     cmd += " signature.tab %s" % (pathway_file)
     os.system(cmd)
+    logging.info("system: %s" % (cmd))
     
     ## prepare outputs
     if options.output_file is not None:
