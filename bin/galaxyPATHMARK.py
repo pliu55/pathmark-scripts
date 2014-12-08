@@ -43,9 +43,13 @@ def main():
                       help = "")
     parser.add_option("-u", "--hub", dest = "hub_filter", action = "store_true", default = False,
                       help = "")
-    parser.add_option("-o", "--output", dest = "output_file", default = None,
-                      help = "")
     parser.add_option("-z", "--seed", dest = "seed", default = None,
+                      help = "")
+    parser.add_option("--bs", "--batchSystem", dest = "batch_system", default = None,
+                      help = "")
+    parser.add_option("--oz", "--output-zip", dest = "output_zip", default = None,
+                      help = "")
+    parser.add_option("--os", "--output-signature", dest = "output_signature", default = None,
                       help = "")
     options, args = parser.parse_args()
     logging.info("options: %s" % (str(options)))
@@ -61,6 +65,8 @@ def main():
     
     ## run signature.py
     cmd = "%s %s" % (sys.executable, signature_exec)
+    if options.batch_system is not None:
+        cmd += " --batchSystem %s" % (options.batch_system)
     cmd += " -b %s" % (options.bootstrap_size)
     cmd += " -n %s" % (options.null_size)
     cmd += " -p %s" % (options.null_permute)
@@ -73,6 +79,8 @@ def main():
     
     ## run PATHMARK.py
     cmd = "%s %s" % (sys.executable, pathmark_exec)
+    if options.batch_system is not None:
+        cmd += " --batchSystem %s" % (options.batch_system)
     if os.path.exists("null_signature.tab"):
         cmd += " -n %s" % ("null_signature.tab")
     if os.path.exists("bootstrap_signature.tab"):
@@ -86,11 +94,14 @@ def main():
     logging.info("system: %s" % (cmd))
     
     ## prepare outputs
-    if options.output_file is not None:
+    if options.output_zip is not None:
         zip_file = zipfile.ZipFile("report.zip", "w")
         zipDirectory("report", zip_file)
         zip_file.close()
-        shutil.copy(os.path.join(work_dir, "report.zip"), options.output_file)
+        shutil.copy(os.path.join(work_dir, "report.zip"), options.output_zip)
+    
+    if options.output_signature is not None:
+        shutil.copy(os.path.join(work_dir, "signature.tab"), options.output_signature)
 
 if __name__ == "__main__":
     main()

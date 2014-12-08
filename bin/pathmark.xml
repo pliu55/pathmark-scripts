@@ -1,11 +1,12 @@
-<tool id="galaxy-pathmark" name="PathMark" version="2.0">
+<tool id="galaxy-pathmark" name="PathMark 2" version="2.0.1">
   <description>PathMark</description>
   <command interpreter="python">galaxyPATHMARK.py
 -f "${filter_low};${filter_high}"
 #if $hubfilter
   -u
 #end if
--o $report
+--oz $report
+--os $signature
 $data
 $phenotype
 $pathway
@@ -19,7 +20,8 @@ $pathway
     <param name="hubfilter" type="boolean" label="Keep hubs with a majority of active downsteam genes"/>
   </inputs>
   <outputs>
-      <data name="report" format="zip" label="Report files"/>
+      <data name="report" format="zip" label="Output Report Files"/>
+      <data name="signature" format="tabular" label="Output Signature File"/>
   </outputs>
     <help>
 Wrapper for PathMark.  
