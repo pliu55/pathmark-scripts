@@ -419,9 +419,8 @@ def main():
         if options.jobTree == None:
             options.jobTree = "./.jobTree"
         
-        jobtree_dir = options.jobTree
-        lasttree_dir = jobtree_dir.replace("job", "last")
-        assert(jobtree_dir != lasttree_dir)
+        jobtree_dir = options.jobTree.rstrip("/")
+        lasttree_dir = jobtree_dir + "_previous"
         
         failed = s.startJobTree(options)
         if failed:
