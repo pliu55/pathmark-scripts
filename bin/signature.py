@@ -419,15 +419,19 @@ def main():
         if options.jobTree == None:
             options.jobTree = "./.jobTree"
         
+        jobtree_dir = options.jobTree
+        lasttree_dir = jobtree_dir.replace("job", "last")
+        assert(jobtree_dir != lasttree_dir)
+        
         failed = s.startJobTree(options)
         if failed:
             logging.warning("WARNING: %d jobs failed" % (failed))
         else:
             logging.info("Run complete!")
-            if os.path.exists(".lastTree"):
-                os.system("rm -rf .lastTree")
-            if os.path.exists(".jobTree"):
-                os.system("mv .jobTree .lastTree")
+            if os.path.exists(lasttree_dir):
+                shutil.rmtree(lasttree_dir)
+            if os.path.exists(jobtree_dir):
+                shutil.move(jobtree_dir, lasttree_dir)
 
 if __name__ == "__main__":
     from signature import *
