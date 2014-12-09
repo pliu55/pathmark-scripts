@@ -39,7 +39,7 @@ def main():
                       help = "")
     parser.add_option("-f", "--filter", dest = "filter_parameters", default = "0.0;0.0",
                       help = "")
-    parser.add_option("-t", "--heat", dest = "heat_diffusion", default = "0",
+    parser.add_option("-t", "--heat", dest = "heat_diffusion", default = "0.0",
                       help = "")
     parser.add_option("-u", "--hub", dest = "hub_filter", action = "store_true", default = False,
                       help = "")

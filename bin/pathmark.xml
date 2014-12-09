@@ -1,9 +1,16 @@
 <tool id="galaxy-pathmark" name="PathMark 2" version="2.0.1">
   <description>PathMark</description>
   <command interpreter="python">galaxyPATHMARK.py
+-n $null_size
+-p $null_method
+-b $bootstrap_size
+-m $method
 -f "${filter_low};${filter_high}"
 #if $hubfilter
   -u
+#end if
+#if str($seed) != '':
+-z $seed
 #end if
 --oz $report
 --os $signature
@@ -15,9 +22,22 @@ $pathway
     <param name="data" type="data" format="matrix" label="Data Matrix File"/>
     <param name="phenotype" type="data" format="matrix" label="Clinical Phenotype File"/>
     <param name="pathway" type="data" format="tabular" label="Pathway File or Directory"/>
+    <param name="null_size" type="integer" value="0" label="Null Distribution Size"/>
+    <param name="null_method" type="select" label="Null Generation Method">
+        <option value="paradigm">Use Paradigm Nulls</option>
+        <option value="samples">Shuffle Sample Labels</option>
+        <option value="features">Shuffle Feature Labels</option>
+    </param>
+    <param name="bootstrap_size" type="integer" value="0" label="Bootstrap Distribution Size"/>
+    <param name="method" type="select" label="Differential Method">
+        <option value="sam">Use Paradigm Nulls</option>
+        <option value="ttest">Shuffle Sample Labels</option>
+        <option value="limma">Shuffle Feature Labels</option>
+    </param>
     <param name="filter_low" type="float" value="0.0" label="Filtering Lower Parameters"/>
     <param name="filter_high" type="float" value="0.0" label="Filtering Upper Parameters"/>
     <param name="hubfilter" type="boolean" label="Keep hubs with a majority of active downsteam genes"/>
+    <param name="seed" type="integer" label="Random Seed" optional="True"/>
   </inputs>
   <outputs>
       <data name="report" format="zip" label="PathMark Report Zip"/>
