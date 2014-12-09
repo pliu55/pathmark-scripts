@@ -30,9 +30,9 @@ $pathway
     </param>
     <param name="bootstrap_size" type="integer" value="0" label="Bootstrap Distribution Size"/>
     <param name="method" type="select" label="Differential Method">
-        <option value="sam">Use Paradigm Nulls</option>
-        <option value="ttest">Shuffle Sample Labels</option>
-        <option value="limma">Shuffle Feature Labels</option>
+        <option value="sam">SAM</option>
+        <option value="ttest">T-Test</option>
+        <option value="limma">LIMMA</option>
     </param>
     <param name="filter_low" type="float" value="0.0" label="Filtering Lower Parameters"/>
     <param name="filter_high" type="float" value="0.0" label="Filtering Upper Parameters"/>
