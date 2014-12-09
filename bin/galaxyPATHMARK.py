@@ -24,7 +24,7 @@ def zipDirectory(directory, zip):
 
 def main():
     ## check for fresh run
-    if os.path.exists(".jobTree"):
+    if os.path.exists(".jobTree") or os.path.exists("jobTree"):
         logging.warning("WARNING: '.jobTree' directory found, remove it first to start a fresh run\n")
     
     ## parse arguments
@@ -75,6 +75,10 @@ def main():
         cmd += " -z %s" % (options.seed)
     cmd += " %s %s" % (data_file, phenotype_file)
     os.system(cmd)
+    if os.path.exists(".jobTree_previous"):
+        shutil.move(".jobTree_previous", ".jobTree_signature")
+    elif os.path.exists("jobTree_previous"):
+        shutil.move("jobTree_previous", "jobTree_signature")
     logging.info("system: %s" % (cmd))
     
     ## run PATHMARK.py
@@ -91,6 +95,10 @@ def main():
         cmd += " -u"
     cmd += " signature.tab %s" % (pathway_file)
     os.system(cmd)
+    if os.path.exists(".jobTree_previous"):
+        shutil.move(".jobTree_previous", ".jobTree_pathmark")
+    elif os.path.exists("jobTree_previous"):
+        shutil.move("jobTree_previous", "jobTree_pathmark")
     logging.info("system: %s" % (cmd))
     
     ## prepare outputs
@@ -99,7 +107,6 @@ def main():
         zipDirectory("report", zip_file)
         zip_file.close()
         shutil.copy(os.path.join(work_dir, "report.zip"), options.output_zip)
-    
     if options.output_signature is not None:
         shutil.copy(os.path.join(work_dir, "signature.tab"), options.output_signature)
 
