@@ -674,7 +674,7 @@ def filterGoodHub(pathmark_graph, global_graph, score_map, node_threshold, child
     return(filtered_graph)
 
 def getLargestSubgraph(pathmark_graph):
-    subgraphs = networkx.weakly_connected_component_subgraphs(pathmark_graph)
+    subgraphs = [graph for graph in networkx.weakly_connected_component_subgraphs(pathmark_graph)]
     if len(subgraphs) == 0:
         largest_subgraph = networkx.MultiDiGraph()
     elif "__DISCONNECTED__" in subgraphs[0].node:
