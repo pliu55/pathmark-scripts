@@ -1,6 +1,6 @@
 THISDIR = ${CURDIR}
 
-PATHMARK_GIT = git://github.com/ucscCancer/paradigm-scripts.git
+PARADIGM_GIT = git://github.com/ucscCancer/paradigm-scripts.git
 
 all : init.sh init.csh
 
