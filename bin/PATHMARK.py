@@ -8,6 +8,8 @@ from copy import deepcopy
 
 import pandas
 import networkx
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from xml.dom.minidom import Document
 
