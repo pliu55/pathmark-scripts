@@ -8,9 +8,6 @@ from copy import deepcopy
 
 import pandas
 import networkx
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 from xml.dom.minidom import Document
 
 from optparse import OptionParser
@@ -1040,6 +1037,9 @@ class generateOutput(Target):
         self.parameters = parameters
         self.directory = directory
     def run(self):
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
         os.chdir(self.directory)
         if not os.path.exists("report"):
             os.mkdir("report")
