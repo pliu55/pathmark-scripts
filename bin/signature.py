@@ -382,15 +382,15 @@ def main():
     parser.add_option("--jobFile",
                       help = "Add as child of jobFile rather than new jobTree")
     parser.add_option("-b", "--bootstrap", dest = "bootstrap_size", default = 0,
-                      help = "")
+                      help = "number of bootstrap samples to estimate subnetwork robustness")
     parser.add_option("-n", "--null", dest = "null_size", default = 0,
-                      help = "")
+                      help = "number of null samples to estimate subnetwork signifiance")
     parser.add_option("-p", "--permute", dest = "null_permute", default = "paradigm",
-                      help = "")
+                      help = "permutation method for generation of null samples")
     parser.add_option("-m", "--method", dest = "signature_method", default = "sam",
-                      help = "")
+                      help = "differential method for computing signatures")
     parser.add_option("-z", "--seed", dest = "seed", default = None,
-                      help = "")
+                      help = "random seed used for bootstrap and null generation")
     options, args = parser.parse_args()
     logging.info("options: %s" % (str(options)))
     print "Using Batch System '%s'" % (options.batchSystem)

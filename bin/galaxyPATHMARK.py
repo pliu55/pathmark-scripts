@@ -30,27 +30,27 @@ def main():
     ## parse arguments
     parser = OptionParser(usage = "%prog [options] data_matrix phenotype_matrix pathway_file")
     parser.add_option("-b", "--bootstrap", dest = "bootstrap_size", default = 0,
-                      help = "")
+                      help = "number of bootstrap samples to estimate subnetwork robustness")
     parser.add_option("-n", "--null", dest = "null_size", default = 0,
-                      help = "")
+                      help = "number of null samples to estimate subnetwork signifiance")
     parser.add_option("-p", "--permute", dest = "null_permute", default = "paradigm",
-                      help = "")
+                      help = "permutation method for generation of null samples")
     parser.add_option("-m", "--method", dest = "signature_method", default = "sam",
-                      help = "")
+                      help = "differential method for computing signatures")
     parser.add_option("-f", "--filter", dest = "filter_parameters", default = "0.0;0.0",
-                      help = "")
+                      help = "filter threshold coefficients")
     parser.add_option("-t", "--heat", dest = "heat_diffusion", default = "0.0",
-                      help = "")
+                      help = "diffusion time for heat diffusion of signature scores across the network")
     parser.add_option("-u", "--hub", dest = "hub_filter", action = "store_true", default = False,
-                      help = "")
+                      help = "apply hub filter that includes hubs with high representation of its children")
     parser.add_option("-z", "--seed", dest = "seed", default = None,
-                      help = "")
+                      help = "random seed used for bootstrap and null generation")
     parser.add_option("--bs", "--batchSystem", dest = "batch_system", default = None,
-                      help = "")
+                      help = "override default batch system used by jobTree")
     parser.add_option("--oz", "--output-zip", dest = "output_zip", default = None,
-                      help = "")
+                      help = "output files into a zipfile")
     parser.add_option("--os", "--output-signature", dest = "output_signature", default = None,
-                      help = "")
+                      help = "output signature file")
     options, args = parser.parse_args()
     logging.info("options: %s" % (str(options)))
     

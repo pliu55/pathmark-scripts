@@ -1079,11 +1079,20 @@ class generateOutput(Target):
                 largest_real_edge_count = len(largest_real_edges)/2
                 real_statistics = [real_node_count, real_edge_count, largest_real_node_count, largest_real_edge_count]
                 for index in range(4):
+                    if index == 0:
+                        report_name = 'nodes'
+                    elif index == 1:
+                        report_name = 'edges'
+                    elif index == 2:
+                        report_name = 'largest_component_nodes'
+                    elif index == 3:
+                        report_name = 'largest_component_edges'
                     xmin = max(0, min([real_statistics[index]] + list(self.null_map[signature][index])) - 50)
                     xmax = max([real_statistics[index]] + list(self.null_map[signature][index])) + 50
                     (n, bins, patches) = plt.hist(list(self.null_map[signature][index]), bins = 20, range = (xmin, xmax), histtype = "stepfilled")
+                    plt.ylim([0, len(self.null_map[signature][index])])
                     plt.axvline(x = real_statistics[index], linestyle = "--", linewidth = 2, color = "r")
-                    plt.savefig("report/%s_%s_%s.png" % (signature, self.parameters.parameters_string, index))
+                    plt.savefig("report/%s_%s_%s.png" % (signature, self.parameters.parameters_string, report_name))
                     plt.clf()
 
 def main():
@@ -1097,15 +1106,15 @@ def main():
     parser.add_option("--jobFile",
                       help = "Add as child of jobFile rather than new jobTree")
     parser.add_option("-b", "--bootstrap", dest = "bootstrap_file", default = None,
-                      help = "")
+                      help = "bootstrap signature file")
     parser.add_option("-n", "--null", dest = "null_file", default = None,
-                      help = "")
+                      help = "null signature file")
     parser.add_option("-f", "--filter", dest = "filter_parameters", default = "0.0;0.0",
-                      help = "")
+                      help = "filter threshold coefficients")
     parser.add_option("-t", "--heat", dest = "heat_diffusion", default = "0.0",
-                      help = "")
+                      help = "diffusion time for heat diffusion of signature scores across the network")
     parser.add_option("-u", "--hub", dest = "hub_filter", action = "store_true", default = False,
-                      help = "")
+                      help = "apply hub filter that includes hubs with high representation of its children")
     options, args = parser.parse_args()
     logging.info("options: %s" % (str(options)))
     print "Using Batch System '%s'" % (options.batchSystem)
