@@ -1,3 +1,5 @@
+all : report img
+
 report :
 	galaxyPATHMARK.py -z 123454321 -n 10 -b 10 -f "1.0;1.0" data/merge_merged.all.tab data/feature.tab data/pid_500_pathway.tab 
 
