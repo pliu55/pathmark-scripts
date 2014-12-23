@@ -1,0 +1,52 @@
+MIM/GLI1 (complex)	-t>	FOXA2
+FOXA2	-t>	BDH1
+FOXA2	-t|	SCGB1A1
+FOXA2	-t>	UCP2
+FOXA2	-t>	PREF1
+FOXA2	-t>	HADH
+FOXA2	-t|	GCG
+FOXA2	-t>	KIR6.2
+FOXA2	-t>	SUR1
+FOXA2	-t>	CPT1
+FOXA2	-t>	FOXA1
+FOXA1	-t>	CYP2C18
+FOXA1	-t>	NKX3-1
+FOXA1	-t>	SHH
+FOXA1	-t>	SOD1
+FOXA1	-t>	COL18A1
+FOXA1	-t>	NRIP1
+FOXA1	-t>	FOXA2
+FOXA1	-t>	SCGB1A1
+FOXA1	-t>	PISD
+FOXA1	component>	DHT/AR/FOXA1 (complex)
+FOXA1	-t>	ATP5J
+FOXA1	-t>	Spermine binding protein
+FOXA1	-t>	DSCAM
+FOXA1	-t>	SFTPD
+FOXA1	-t>	SFTPA
+FOXA1	-t>	Probasin
+FOXA1	-t>	TFF1
+FOXA1	-t>	AP1B1
+FOXA1	-t>	Cyclin D1
+FOXA1	-t>	GCG
+FOXA1	-t>	XBP1
+FOXA1	-t>	NDUFV3
+FOXA1	-t>	SERPINA1
+FOXA1	-t>	APOB
+E2/ERA (complex)	-t>	ATP5J
+E2/ERA (complex)	-t>	FOXA1
+E2/ERA (complex)	-t>	AP1B1
+E2/ERA (complex)	-t>	DSCAM
+E2/ERA (complex)	-t>	XBP1
+E2/ERA (complex)	-t>	PISD
+E2/ERA (complex)	-t>	Cyclin D1
+E2/ERA (complex)	-t>	NDUFV3
+E2/ERA (complex)	-t>	COL18A1
+E2/ERA (complex)	-t>	SOD1
+E2/ERA (complex)	-t>	TFF1
+E2/ERA (complex)	-t>	NRIP1
+NCOA3	-t>	NRIP1
+NCOA3	-t>	XBP1
+NCOA3	-t>	DSCAM
+NCOA3	-t>	TFF1
+NCOA3	-t>	SOD1
