@@ -1,11 +1,11 @@
-PATHMARK: Identification of Pathway Markers of Interest
+PathMark: Identification of Pathway Markers of Interest
 ========
 
 Current Version 
 --------
 
-1.0
-	
+2.0
+
 Authors
 --------
 
@@ -15,19 +15,32 @@ Sam Ng and Joshua M. Stuart.
 Requirements
 --------
 
-See online manual
- - http://sysbio.soe.ucsc.edu/paradigm/tutorial/
+* [python](http://www.python.org/) >= 2.7
+   * [scipy](http://www.scipy.org/) >= 0.12.0
+   * [numpy](http://numpy.scipy.org/)
+   * [pandas](http://pandas.pydata.org/)
+   * [rpy2](http://rpy.sourceforge.net/rpy2/doc-2.4/html/overview.html)
+   * [networkx](http://networkx.github.io/)
+* [R](http://cran.r-project.org/)
+   * [siggenes](http://www.bioconductor.org/packages/release/bioc/html/siggenes.html)
+   * [edgeR](http://www.bioconductor.org/packages/release/bioc/html/edgeR.html)
+   * [limma](http://www.bioconductor.org/packages/release/bioc/html/limma.html)
+   * [samr](http://cran.r-project.org/web/packages/samr/index.html)
 
 Installation
 -------
 
-See online manual
- - http://sysbio.soe.ucsc.edu/paradigm/tutorial/
+- Install dependencies
+- Download the PathMark repository to the desired location
+- Run "make" in pathmark-scripts/ to generate source files and may also require downloading the PARADIGM repository (see https://github.com/ucscCancer/paradigm-scripts)
+- Source init files for pathmark-scripts and paradigm-scripts (init.sh for bash and init.csh for csh)
+- Run code on example data in examples/ with "make"
 
 Folders
 ------
 * bin : executables
-* examples : GBM and BRCA inputs for demonstration purposes
+* cytoscape : CytoscapeWeb and Cytoscape visualization files
+* examples : BCCL inputs for demonstration purposes
 
 Contact
 ------
