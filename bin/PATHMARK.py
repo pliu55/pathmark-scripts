@@ -8,6 +8,7 @@ from copy import deepcopy
 
 import pandas
 import networkx
+from scipy import stats
 from xml.dom.minidom import Document
 
 from optparse import OptionParser
@@ -1087,11 +1088,14 @@ class generateOutput(Target):
                         report_name = 'largest_component_nodes'
                     elif index == 3:
                         report_name = 'largest_component_edges'
+                    zscore = stats.zmap(real_statistics[index], list(self.null_map[signature][index]))
+                    pvalue = stats.norm.sf(zscore)
                     xmin = max(0, min([real_statistics[index]] + list(self.null_map[signature][index])) - 50)
                     xmax = max([real_statistics[index]] + list(self.null_map[signature][index])) + 50
                     (n, bins, patches) = plt.hist(list(self.null_map[signature][index]), bins = 20, range = (xmin, xmax), histtype = "stepfilled")
                     plt.ylim([0, len(self.null_map[signature][index])])
                     plt.axvline(x = real_statistics[index], linestyle = "--", linewidth = 2, color = "r")
+                    plt.title("p = %s" % (float('%.2g' % (pvalue))))
                     plt.savefig("report/%s_%s_%s.png" % (signature, self.parameters.parameters_string, report_name))
                     plt.clf()
 
