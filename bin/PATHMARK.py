@@ -15,9 +15,6 @@ from optparse import OptionParser
 from jobTree.scriptTree.target import Target
 from jobTree.scriptTree.stack import Stack
 
-#### NOTE BLOCK
-#### - Add in option to collapse the input pathway
-
 ## logger
 logging.basicConfig(filename = "pathmark.log", level = logging.INFO)
 

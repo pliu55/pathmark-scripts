@@ -16,10 +16,6 @@ from optparse import OptionParser
 from jobTree.scriptTree.target import Target
 from jobTree.scriptTree.stack import Stack
 
-#### NOTE BLOCK
-#### - Convert LIMMA code to rpy2
-#### - Add method for dealing with either median or mean dichotomies of continuous data
-
 ## logger
 logging.basicConfig(filename = "signature.log", level = logging.INFO)
 

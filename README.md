@@ -9,7 +9,7 @@ Current Version
 Authors
 --------
 
-Sam Ng and Joshua M. Stuart.
+Sam Ng and Joshua M. Stuart
 
 
 Requirements
@@ -31,8 +31,8 @@ Installation
 -------
 
 - Install dependencies
-- Download the PathMark repository to the desired location
-- Run "make" in pathmark-scripts/ to generate source files and may also require downloading the PARADIGM repository (see https://github.com/ucscCancer/paradigm-scripts)
+- Download the pathmark-scripts repository to the desired location
+- Run "make" in pathmark-scripts/ to generate source files; may also require downloading the paradigm-scripts repository (see https://github.com/ucscCancer/paradigm-scripts)
 - Source init files for pathmark-scripts and paradigm-scripts (init.sh for bash and init.csh for csh)
 - Run code on example data in examples/ with "make"
 
