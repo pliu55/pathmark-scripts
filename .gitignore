@@ -1,6 +1,6 @@
 bin/circlePlot.py
 init.csh
 init.sh
-paradigm-scripts/
+paradigm-scripts
 *.pyc
 .DS_Store
