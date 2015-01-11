@@ -55,6 +55,21 @@ pathway_file - PARADIGM pathway interactions file
 -z random_seed - fix random seed
 ```
 
+```
+circlePlot.py [options] output_directory input_matrix [input_matrix ...]
+
+output_directory - path to directory to output plots
+input_matrix - sample by feature data matrix for plots, rings created from inner to outer
+
+-s sample_file - one column file of samples to plot
+-f feature_file - one column file of features to plot
+-o order_parameters - feature:file[,file ...] hierarchical sort on feature and data files
+-c center_file - two column file of feature scores for center circle colors
+-m color_map - color parameters file
+-e file_extension - output file extension (default: png)
+-l - output feature names for each plot
+```
+
 Folders
 ------
 - bin : executables
