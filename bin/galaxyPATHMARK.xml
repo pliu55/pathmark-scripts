@@ -1,5 +1,5 @@
-<tool id="galaxy-pathmark" name="PathMark 2" version="2.0.1">
-  <description>PathMark</description>
+<tool id="galaxyPathmark" name="PathMark" version="2.0.2">
+  <description>performs differential pathway marker identification</description>
   <command interpreter="python">galaxyPATHMARK.py
 -n $null_size
 -p $null_method
@@ -12,16 +12,16 @@
 #if str($seed) != '':
 -z $seed
 #end if
---oz $report
---os $signature
+--oz $output_zip
+--os $output_signature
 $data
 $phenotype
 $pathway
   </command>
   <inputs>
-    <param name="data" type="data" format="matrix" label="Data Matrix File"/>
-    <param name="phenotype" type="data" format="matrix" label="Clinical Phenotype File"/>
-    <param name="pathway" type="data" format="tabular" label="Pathway File or Directory"/>
+    <param name="data" type="data" format="tabular" label="Data Matrix"/>
+    <param name="phenotype" type="data" format="tabular" label="Clinical Phenotype Matrix"/>
+    <param name="pathway" type="data" format="data" label="Pathway File or Zip"/>
     <param name="null_size" type="integer" value="0" label="Null Distribution Size"/>
     <param name="null_method" type="select" label="Null Generation Method">
         <option value="paradigm">Use Paradigm Nulls</option>
@@ -34,16 +34,16 @@ $pathway
         <option value="ttest">T-Test</option>
         <option value="limma">LIMMA</option>
     </param>
-    <param name="filter_low" type="float" value="0.0" label="Filtering Lower Parameters"/>
-    <param name="filter_high" type="float" value="0.0" label="Filtering Upper Parameters"/>
+    <param name="filter_low" type="float" value="0.0" label="Lower Filter Parameter"/>
+    <param name="filter_high" type="float" value="0.0" label="Upper Filter Parameter"/>
     <param name="hubfilter" type="boolean" label="Keep hubs with a majority of active downsteam genes"/>
-    <param name="seed" type="integer" label="Random Seed" optional="True"/>
+    <param name="seed" type="integer" label="Fixed Random Seed" optional="True"/>
   </inputs>
   <outputs>
-      <data name="report" format="zip" label="PathMark Report Zip"/>
-      <data name="signature" format="tabular" label="PathMark Signature File"/>
+      <data name="output_zip" format="data" label="PathMark Output Zip"/>
+      <data name="output_signature" format="tabular" label="PathMark Signature File"/>
   </outputs>
     <help>
-Wrapper for PathMark.  
+Wrapper for PathMark subnetwork identification program.  
     </help>
 </tool>
