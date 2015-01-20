@@ -808,7 +808,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
                 ## set edge attributes
                 for key, value in networkx_graph.edge[source][target][edge].items():
                     att_node = doc.createElement("att")
-                    att_node.setAttribute("name", key)
+                    att_node.setAttribute("name", str(key).upper())
                     att_node.setAttribute("value", str(value))
                     if type(value) == float:
                         att_node.setAttribute("type", "real")
