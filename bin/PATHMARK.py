@@ -10,6 +10,7 @@ import pandas
 import networkx
 from scipy import stats
 from xml.dom.minidom import Document
+import simplejson as json
 
 from optparse import OptionParser
 from jobTree.scriptTree.target import Target
@@ -740,71 +741,76 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
     Write a Cytoscape XGMML format file from a networkx object [PATHMARK.py specific]
     """
     doc = Document()
-    graph_node = doc.createElement("graph")
-    graph_node.setAttribute("xmlns", "http://www.cs.rpi.edu/XGMML")
-    graph_node.setAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/")
-    graph_node.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
-    graph_node.setAttribute("xmlns:rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-    graph_node.setAttribute("xmlns:cy", "http://www.cytoscape.org")
-    graph_node.setAttribute("directed", "1")
-    doc.appendChild(graph_node)
+    graph_element = doc.createElement("graph")
+    graph_element.setAttribute("xmlns", "http://www.cs.rpi.edu/XGMML")
+    graph_element.setAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/")
+    graph_element.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
+    graph_element.setAttribute("xmlns:rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+    graph_element.setAttribute("xmlns:cy", "http://www.cytoscape.org")
+    graph_element.setAttribute("directed", "1")
+    doc.appendChild(graph_element)
     name_map = {}
-    for i, n in enumerate(networkx_graph.node):
-        name_map[n] = i
-        node = doc.createElement("node")
-        node.setAttribute("label", str(n))
-        node.setAttribute("id", str(i))
+    for index, node in enumerate(networkx_graph.node):
+        name_map[node] = index
+        node_element = doc.createElement("node")
+        node_element.setAttribute("id", str(index))
+        node_element.setAttribute("label", str(node))
+        ## set name string
+        att_node = doc.createElement("att")
+        att_node.setAttribute("name", "NAME")
+        att_node.setAttribute("value", str(node))
+        att_node.setAttribute("type", "string")
+        node_element.appendChild(att_node)
         ## set type string
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "TYPE")
-        att_node.setAttribute("value", str(networkx_graph.node[n]["type"]))
+        att_node.setAttribute("value", str(networkx_graph.node[node]["type"]))
         att_node.setAttribute("type", "string")
-        node.appendChild(att_node)
+        node_element.appendChild(att_node)
         ## set label string
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "LABEL")
-        if networkx_graph.node[n]["type"] == "protein":
-            att_node.setAttribute("value", str(n))
+        if networkx_graph.node[node]["type"] == "protein":
+            att_node.setAttribute("value", str(node))
         else:
             att_node.setAttribute("value", "")
         att_node.setAttribute("type", "string")
-        node.appendChild(att_node)
+        node_element.appendChild(att_node)
         ## set signature values
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "SIGNATURE")
-        if str(n) in signature_map:
-            att_node.setAttribute("value", str(signature_map[str(n)]))
+        if str(node) in signature_map:
+            att_node.setAttribute("value", str(signature_map[str(node)]))
         else:
             att_node.setAttribute("value", "0")
         att_node.setAttribute("type", "real")
-        node.appendChild(att_node)
+        node_element.appendChild(att_node)
         ## set score values
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "SCORE")
-        if str(n) in score_map:
-            att_node.setAttribute("value", str(score_map[str(n)]))
+        if str(node) in score_map:
+            att_node.setAttribute("value", str(score_map[str(node)]))
         else:
             att_node.setAttribute("value", "0")
         att_node.setAttribute("type", "real")
-        node.appendChild(att_node)
+        node_element.appendChild(att_node)
         ## set bootstrap values
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "BOOTSTRAP")
-        if str(n) in bootstrap_map:
-            att_node.setAttribute("value", str(bootstrap_map[str(n)]))
+        if str(node) in bootstrap_map:
+            att_node.setAttribute("value", str(bootstrap_map[str(node)]))
         else:
             att_node.setAttribute("value", "0")
         att_node.setAttribute("type", "real")
-        node.appendChild(att_node)
-        graph_node.appendChild(node)
-
+        node_element.appendChild(att_node)
+        graph_element.appendChild(node_element)
     for source in networkx_graph.edge:
         for target in networkx_graph.edge[source]:
             for edge in networkx_graph.edge[source][target]:
-                edge_node = doc.createElement("edge")
-                edge_node.setAttribute("label", "%s - %s" % (source, target))
-                edge_node.setAttribute("source", str(name_map[source]))
-                edge_node.setAttribute("target", str(name_map[target]))
+                edge_element = doc.createElement("edge")
+                edge_element.setAttribute("source", str(name_map[source]))
+                edge_element.setAttribute("target", str(name_map[target]))
+                edge_element.setAttribute("label", "%s - %s" % (source, target))
                 ## set edge attributes
                 for key, value in networkx_graph.edge[source][target][edge].items():
                     att_node = doc.createElement("att")
@@ -816,7 +822,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
                         att_node.setAttribute("type", "integer")
                     else:
                         att_node.setAttribute("type", "string")
-                    edge_node.appendChild(att_node)
+                    edge_element.appendChild(att_node)
                 ## set bootstrap values
                 att_node = doc.createElement("att")
                 att_node.setAttribute("name", "BOOTSTRAP")
@@ -825,10 +831,67 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
                 else:
                     att_node.setAttribute("value", "0")
                 att_node.setAttribute("type", "real")
-                edge_node.appendChild(att_node)
-                graph_node.appendChild(edge_node)
+                edge_element.appendChild(att_node)
+                graph_element.appendChild(edge_element)
     o = open(output_file, "w")
     doc.writexml(o, addindent = " ", newl = "\n")
+    o.close()
+
+def writeNetworkXCytoscapeJSON(output_file, networkx_graph, signature_map, score_map, bootstrap_map):
+    """
+    Write a Cytoscape JSON format file from a networkx object [PATHMARK.py specific]
+    """
+    json_object = {}
+    json_object["nodes"] = []
+    name_map = {}
+    for index, node in enumerate(networkx_graph.node):
+        name_map[node] = index
+        node_element = {"data" : {}}
+        node_element["data"]["id"] = str(index)
+        ## set name string
+        node_element["data"]["NAME"] = str(node)
+        ## set type string
+        node_element["data"]["TYPE"] = str(networkx_graph.node[node]["type"])
+        ## set label string
+        if networkx_graph.node[node]["type"] == "protein":
+            node_element["data"]["LABEL"] = str(node)
+        else:
+            node_element["data"]["LABEL"] = str("")
+        ## set signature values
+        if str(node) in signature_map:
+            node_element["data"]["SIGNATURE"] = signature_map[str(node)]
+        else:
+            node_element["data"]["SIGNATURE"] = 0.0
+        ## set score values
+        if str(node) in score_map:
+            node_element["data"]["SCORE"] = score_map[str(node)]
+        else:
+            node_element["data"]["SCORE"] = 0.0
+        ## set bootstrap values
+        if str(node) in bootstrap_map:
+            node_element["data"]["BOOTSTRAP"] = bootstrap_map[str(node)]
+        else:
+            node_element["data"]["BOOTSTRAP"] = 0.0
+        json_object["nodes"].append(node_element)
+    json_object["edges"] = []
+    for source in networkx_graph.edge:
+        for target in networkx_graph.edge[source]:
+            for edge in networkx_graph.edge[source][target]:
+                edge_element = {"data" : {}}
+                edge_element["data"]["source"] = str(name_map[source])
+                edge_element["data"]["target"] = str(name_map[target])
+                edge_element["data"]["NAME"] = "%s - %s" % (source, target)
+                ## set edge attributes
+                for key, value in networkx_graph.edge[source][target][edge].items():
+                    edge_element["data"][str(key).upper()] = value
+                ## set bootstrap values
+                if (str(source), str(target)) in bootstrap_map:
+                    edge_element["data"]["BOOTSTRAP"] = bootstrap_map[(str(source), str(target))]
+                else:
+                    edge_element["data"]["BOOTSTRAP"] = 0.0
+                json_object["edges"].append(edge_element)
+    o = open(output_file, "w")
+    o.write(json.dumps(json_object, indent = "  "))
     o.close()
 
 ## jt classes
