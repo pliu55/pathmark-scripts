@@ -54,7 +54,6 @@ def main():
     input_file = os.path.abspath(args[0])
     output_file = args[1]
     
-    assert(input_file.endswith(".xgmml"))
     convertCytoscapeXGMMLtoCytoscapeJSON(output_file, input_file)
 
 if __name__ == "__main__":
