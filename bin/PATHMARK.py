@@ -804,6 +804,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
         att_node.setAttribute("type", "real")
         node_element.appendChild(att_node)
         graph_element.appendChild(node_element)
+    
     for source in networkx_graph.edge:
         for target in networkx_graph.edge[source]:
             for edge in networkx_graph.edge[source][target]:
@@ -873,6 +874,7 @@ def writeNetworkXCytoscapeJSON(output_file, networkx_graph, signature_map, score
         else:
             node_element["data"]["BOOTSTRAP"] = 0.0
         json_object["nodes"].append(node_element)
+    
     json_object["edges"] = []
     for source in networkx_graph.edge:
         for target in networkx_graph.edge[source]:
@@ -880,7 +882,6 @@ def writeNetworkXCytoscapeJSON(output_file, networkx_graph, signature_map, score
                 edge_element = {"data" : {}}
                 edge_element["data"]["source"] = str(name_map[source])
                 edge_element["data"]["target"] = str(name_map[target])
-                edge_element["data"]["NAME"] = "%s - %s" % (source, target)
                 ## set edge attributes
                 for key, value in networkx_graph.edge[source][target][edge].items():
                     edge_element["data"][str(key).upper()] = value
@@ -1109,6 +1110,11 @@ class generateOutput(Target):
         for signature in self.signatures:
             ## output xgmml, sif, and table
             writeNetworkXCytoscapeXGMML("report/%s_%s.xgmml" % (signature, self.parameters.parameters_string),
+                                        self.graph_map[signature],
+                                        self.signature_map[signature],
+                                        self.score_map[signature],
+                                        self.bootstrap_map[signature])
+            writeNetworkXCytoscapeJSON("report/%s_%s.json" % (signature, self.parameters.parameters_string),
                                         self.graph_map[signature],
                                         self.signature_map[signature],
                                         self.score_map[signature],
