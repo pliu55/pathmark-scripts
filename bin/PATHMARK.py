@@ -776,7 +776,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
             att_node.setAttribute("value", "")
         att_node.setAttribute("type", "string")
         node_element.appendChild(att_node)
-        ## set signature values
+        ## set signature value
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "SIGNATURE")
         if str(node) in signature_map:
@@ -785,7 +785,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
             att_node.setAttribute("value", "0")
         att_node.setAttribute("type", "real")
         node_element.appendChild(att_node)
-        ## set score values
+        ## set score value
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "SCORE")
         if str(node) in score_map:
@@ -794,7 +794,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
             att_node.setAttribute("value", "0")
         att_node.setAttribute("type", "real")
         node_element.appendChild(att_node)
-        ## set bootstrap values
+        ## set bootstrap value
         att_node = doc.createElement("att")
         att_node.setAttribute("name", "BOOTSTRAP")
         if str(node) in bootstrap_map:
@@ -811,6 +811,12 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
                 edge_element.setAttribute("source", str(name_map[source]))
                 edge_element.setAttribute("target", str(name_map[target]))
                 edge_element.setAttribute("label", "%s - %s" % (source, target))
+                ## set name string
+                att_node = doc.createElement("att")
+                att_node.setAttribute("name", "NAME")
+                att_node.setAttribute("value", "%s - %s" % (source, target))
+                att_node.setAttribute("type", "string")
+                edge_element.appendChild(att_node)
                 ## set edge attributes
                 for key, value in networkx_graph.edge[source][target][edge].items():
                     att_node = doc.createElement("att")
@@ -823,7 +829,7 @@ def writeNetworkXCytoscapeXGMML(output_file, networkx_graph, signature_map, scor
                     else:
                         att_node.setAttribute("type", "string")
                     edge_element.appendChild(att_node)
-                ## set bootstrap values
+                ## set bootstrap value
                 att_node = doc.createElement("att")
                 att_node.setAttribute("name", "BOOTSTRAP")
                 if (str(source), str(target)) in bootstrap_map:
