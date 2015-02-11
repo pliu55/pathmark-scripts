@@ -1,0 +1,16 @@
+<tool id="convertCytoscapeJSON" name="CytoscapeJSON Converter" version="1.0.0">
+  <description>converts Cytoscape compatible network formats to CytoscapeJSON</description>
+  <command interpreter="python">convertCytoscapeJSON.py
+$input_network
+$output_network
+  </command>
+  <inputs>
+    <param name="input_network" type="data" format="data" label="Cytoscape Network File"/>
+  </inputs>
+  <outputs>
+      <data name="output_network" format="data" label="CytoscapeJSON Network File"/>
+  </outputs>
+    <help>
+Converter for CytoscapeJS visualizer.  
+    </help>
+</tool>
