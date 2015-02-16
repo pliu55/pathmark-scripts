@@ -3,7 +3,7 @@
 PATHMARK.py
     by Sam Ng
 """
-import logging, math, os, re, shutil, sys, types
+import logging, math, os, re, shutil, sys, types, zipfile
 from copy import deepcopy
 
 import pandas

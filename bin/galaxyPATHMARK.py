@@ -20,7 +20,7 @@ pathmark_exec = os.path.join(bin_dir, "PATHMARK.py")
 def zipDirectory(directory, zip):
     for root, dirs, files in os.walk(directory):
         for file in files:
-            zip.write(os.path.join(root, file))
+            zip.write(os.path.join(root, file), os.path.join(root, file).lstrip(directory).lstrip("/"))
 
 def main():
     ## check for fresh run

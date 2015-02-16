@@ -21,7 +21,7 @@ $pathway
   <inputs>
     <param name="data" type="data" format="tabular" label="Data Matrix"/>
     <param name="phenotype" type="data" format="tabular" label="Clinical Phenotype Matrix"/>
-    <param name="pathway" type="data" format="data" label="Pathway File or Zip"/>
+    <param name="pathway" type="data" format="data" label="Pathway File"/>
     <param name="null_size" type="integer" value="0" label="Null Distribution Size"/>
     <param name="null_method" type="select" label="Null Generation Method">
         <option value="paradigm">Use Paradigm Nulls</option>
