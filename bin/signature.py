@@ -17,13 +17,13 @@ from jobTree.scriptTree.target import Target
 from jobTree.scriptTree.stack import Stack
 
 ## logger
-logging.basicConfig(filename = "signature.log", level = logging.INFO)
+logger = logging.basicConfig(filename = "signature.log", level = logging.INFO)
 
 ## default variables
-null_prefixes = ["na_", "nw_"]          ## valid null samples must start with one of these
-                                        ## prefixes and end in a sample name
+null_prefixes = ["na_", "nw_"]          ## valid paradigm null samples must start with
+                                        ## one of these prefixes and end in a sample name
 
-## pm classes
+## classes
 class Parameters:
     """
     Stores parameters used for this [signature.py specific]
@@ -181,7 +181,7 @@ class rpy2LIMMA:
             os.remove(plot_file)
         return(pandas.DataFrame(result_frame.icol(1)))
         
-## signature functions
+## functions
 def generateDichotomies(phenotype, phenotype_frame, data_samples, reverse_sort = False):
     """
     Generates dichotomies for a given column in the phenotype file [signature.py specific]
@@ -370,7 +370,7 @@ class mergeAllSignatures(Target):
 def main():
     ## check for fresh run
     if os.path.exists(".jobTree"):
-        logging.warning("WARNING: '.jobTree' directory found, remove it first to start a fresh run\n")
+        logger.warning("WARNING: '.jobTree' directory found, remove it first to start a fresh run\n")
     
     ## parse arguments
     parser = OptionParser(usage = "%prog [options] data_matrix phenotype_matrix")
@@ -378,21 +378,21 @@ def main():
     parser.add_option("--jobFile",
                       help = "Add as child of jobFile rather than new jobTree")
     parser.add_option("-b", "--bootstrap", dest = "bootstrap_size", default = 0,
-                      help = "number of bootstrap samples to estimate subnetwork robustness")
+                      help = "Number of bootstrap samples to estimate subnetwork robustness")
     parser.add_option("-n", "--null", dest = "null_size", default = 0,
-                      help = "number of null samples to estimate subnetwork signifiance")
+                      help = "Number of null samples to estimate subnetwork significance")
     parser.add_option("-p", "--permute", dest = "null_permute", default = "paradigm",
-                      help = "permutation method for generation of null samples")
+                      help = "Permutation method for generation of null samples")
     parser.add_option("-m", "--method", dest = "signature_method", default = "sam",
-                      help = "differential method for computing signatures")
+                      help = "Differential method for computing signatures")
     parser.add_option("-z", "--seed", dest = "seed", default = None,
-                      help = "random seed used for bootstrap and null generation")
+                      help = "Random seed used for bootstrap and null generation")
     options, args = parser.parse_args()
-    logging.info("options: %s" % (str(options)))
+    logger.info("options: %s" % (str(options)))
     print "Using Batch System '%s'" % (options.batchSystem)
     
     if len(args) != 2:
-        logging.error("ERROR: incorrect number of arguments\n")
+        logger.error("ERROR: incorrect number of arguments\n")
         sys.exit(1)
     data_file = os.path.abspath(args[0])
     phenotype_file = os.path.abspath(args[1])
@@ -420,9 +420,9 @@ def main():
         
         failed = s.startJobTree(options)
         if failed:
-            logging.warning("WARNING: %d jobs failed" % (failed))
+            logger.warning("WARNING: %d jobs failed" % (failed))
         else:
-            logging.info("Run complete!")
+            logger.info("Run complete!")
             if os.path.exists(lasttree_dir):
                 shutil.rmtree(lasttree_dir)
             if os.path.exists(jobtree_dir):

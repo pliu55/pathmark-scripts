@@ -19,7 +19,7 @@ from jobTree.scriptTree.stack import Stack
 ## logger
 logging.basicConfig(filename = "pathmark.log", level = logging.INFO)
 
-## pm classes
+## classes
 class Parameters:
     """
     Stores parameters used for this [PATHMARK.py specific]
@@ -203,7 +203,7 @@ class Pathway:
                     self.interactions[source][target] = ";".join(list(set(self.interactions[source][target].split(";")) |
                                                                       set(append_pathway.interactions[source][target].split(";"))))
 
-## pm functions
+## functions
 def logger(message, file = None, die = False):
     """
     Writes messages to standard error [2014-3-1]
