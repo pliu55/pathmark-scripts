@@ -17,7 +17,8 @@ from jobTree.scriptTree.target import Target
 from jobTree.scriptTree.stack import Stack
 
 ## logger
-logger = logging.basicConfig(filename = "signature.log", level = logging.INFO)
+logger = logging.getLogger('galaxy-pathmark.signature')
+logger.setLevel(logging.DEBUG)
 
 ## default variables
 null_prefixes = ["na_", "nw_"]          ## valid paradigm null samples must start with
@@ -368,6 +369,18 @@ class mergeAllSignatures(Target):
         # shutil.rmtree("analysis/signature_files")
         
 def main():
+    ## configure logger
+    formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
+    file_handler = logging.FileHandler('signature.log')
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.INFO)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(logging.ERROR)
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+    
+    
     ## check for fresh run
     if os.path.exists(".jobTree"):
         logger.warning("WARNING: '.jobTree' directory found, remove it first to start a fresh run\n")
